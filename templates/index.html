@@ -1,0 +1,270 @@
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({ startOnLoad: true });
+
+        // DOM Elements
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const browseBtn = document.getElementById('browse-btn');
+        const progressContainer = document.getElementById('progress-container');
+        const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+        const uploadSection = document.getElementById('upload-section');
+        const visualizationSection = document.getElementById('visualization-section');
+        const projectsList = document.getElementById('projects-list');
+
+        // Tab functionality
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        // Ensure DOM is fully loaded before attaching event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab functionality
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Remove active class from all buttons and contents
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.add('hidden'));
+                    
+                    // Add active class to clicked button
+                    button.classList.add('active');
+                    
+                    // Show corresponding content
+                    const tabId = button.getAttribute('data-tab');
+                    document.getElementById(`${tabId}-tab`).classList.remove('hidden');
+                });
+            });
+
+            // File upload functionality
+            if (browseBtn && fileInput) {
+                browseBtn.addEventListener('click', () => {
+                    fileInput.click();
+                });
+            }
+
+            if (uploadArea && fileInput) {
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('bg-blue-50');
+                });
+
+                uploadArea.addEventListener('dragleave', () => {
+                    uploadArea.classList.remove('bg-blue-50');
+                });
+
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('bg-blue-50');
+                    
+                    if (e.dataTransfer.files.length) {
+                        handleFileUpload(e.dataTransfer.files[0]);
+                    }
+                });
+
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length) {
+                        handleFileUpload(e.target.files[0]);
+                    }
+                });
+            }
+
+            // Initialize
+            loadProjects();
+            loadSampleData();
+        });
+
+        function handleFileUpload(file) {
+            // Show progress bar
+            progressContainer.classList.remove('hidden');
+            
+            // Simulate upload progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 10;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    
+                    // After upload completes, show visualization
+                    setTimeout(() => {
+                        uploadSection.classList.add('hidden');
+                        visualizationSection.classList.remove('hidden');
+                        loadSampleData();
+                    }, 500);
+                }
+                
+                progressFill.style.width = `${progress}%`;
+                progressText.textContent = `${Math.round(progress)}%`;
+            }, 200);
+        }
+
+        // Load sample data for visualization
+        function loadSampleData() {
+            // Initialize graphs after a short delay to ensure DOM is ready
+            setTimeout(() => {
+                // Sample architecture data
+                const architectureData = {
+                    nodes: [
+                        { data: { id: 'frontend', label: 'Frontend', type: 'component' } },
+                        { data: { id: 'backend', label: 'Backend API', type: 'component' } },
+                        { data: { id: 'database', label: 'Database', type: 'component' } },
+                        { data: { id: 'auth', label: 'Auth Service', type: 'service' } },
+                        { data: { id: 'storage', label: 'Storage Service', type: 'service' } }
+                    ],
+                    edges: [
+                        { data: { source: 'frontend', target: 'backend', type: 'depends' } },
+                        { data: { source: 'backend', target: 'database', type: 'depends' } },
+                        { data: { source: 'backend', target: 'auth', type: 'depends' } },
+                        { data: { source: 'backend', target: 'storage', type: 'depends' } }
+                    ]
+                };
+
+                // Initialize Cytoscape for architecture graph
+                const architectureGraph = document.getElementById('architecture-graph');
+                if (architectureGraph) {
+                    cytoscape({
+                        container: architectureGraph,
+                        elements: architectureData,
+                        style: [
+                            {
+                                selector: 'node',
+                                style: {
+                                    'background-color': '#4299e1',
+                                    'label': 'data(label)',
+                                    'color': '#fff',
+                                    'text-valign': 'center',
+                                    'text-halign': 'center'
+                                }
+                            },
+                            {
+                                selector: 'node[type = "service"]',
+                                style: {
+                                    'background-color': '#48bb78'
+                                }
+                            },
+                            {
+                                selector: 'edge',
+                                style: {
+                                    'width': 2,
+                                    'line-color': '#a0aec0',
+                                    'target-arrow-color': '#a0aec0',
+                                    'target-arrow-shape': 'triangle',
+                                    'curve-style': 'bezier'
+                                }
+                            }
+                        ],
+                        layout: {
+                            name: 'cose',
+                            animate: true
+                        }
+                    });
+                }
+
+                // Sample dependency data
+                const dependencyData = {
+                    nodes: [
+                        { data: { id: 'models', label: 'models.py' } },
+                        { data: { id: 'views', label: 'views.py' } },
+                        { data: { id: 'urls', label: 'urls.py' } },
+                        { data: { id: 'settings', label: 'settings.py' } },
+                        { data: { id: 'auth', label: 'auth.py' } }
+                    ],
+                    edges: [
+                        { data: { source: 'views', target: 'models' } },
+                        { data: { source: 'urls', target: 'views' } },
+                        { data: { source: 'views', target: 'auth' } },
+                        { data: { source: 'auth', target: 'models' } }
+                    ]
+                };
+
+                // Initialize Cytoscape for dependency graph
+                const dependenciesGraph = document.getElementById('dependencies-graph');
+                if (dependenciesGraph) {
+                    cytoscape({
+                        container: dependenciesGraph,
+                        elements: dependencyData,
+                        style: [
+                            {
+                                selector: 'node',
+                                style: {
+                                    'background-color': '#ed8936',
+                                    'label': 'data(label)',
+                                    'color': '#fff',
+                                    'text-valign': 'center',
+                                    'text-halign': 'center'
+                                }
+                            },
+                            {
+                                selector: 'edge',
+                                style: {
+                                    'width': 2,
+                                    'line-color': '#a0aec0',
+                                    'target-arrow-color': '#a0aec0',
+                                    'target-arrow-shape': 'triangle',
+                                    'curve-style': 'bezier'
+                                }
+                            }
+                        ],
+                        layout: {
+                            name: 'cose',
+                            animate: true
+                        }
+                    });
+                }
+
+                // Render sample metrics
+                const complexityData = document.getElementById('complexity-data');
+                if (complexityData) {
+                    complexityData.textContent = "Average: 3.2 | Highest: 8 (UserService.authenticate)";
+                }
+                
+                const connectedData = document.getElementById('connected-data');
+                if (connectedData) {
+                    connectedData.textContent = "UserService (32 connections) | OrderService (28 connections) | PaymentService (25 connections)";
+                }
+                
+                const circularData = document.getElementById('circular-data');
+                if (circularData) {
+                    circularData.textContent = "None detected";
+                }
+                
+                const deadcodeData = document.getElementById('deadcode-data');
+                if (deadcodeData) {
+                    deadcodeData.textContent = "2 unused functions detected | 1 unused class detected";
+                }
+            }, 100);
+        }
+
+        // Load projects list
+        function loadProjects() {
+            // Sample projects data
+            const projects = [
+                { id: 1, name: "E-commerce Platform", date: "2025-10-15", status: "completed" },
+                { id: 2, name: "Task Management App", date: "2025-10-10", status: "completed" },
+                { id: 3, name: "Analytics Dashboard", date: "2025-10-05", status: "analyzing" }
+            ];
+
+            if (projectsList) {
+                projectsList.innerHTML = projects.map(project => `
+                    <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition duration-150">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="font-semibold text-lg">${project.name}</h3>
+                                <p class="text-gray-500 text-sm">Uploaded: ${project.date}</p>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <span class="px-2 py-1 rounded-full text-xs font-medium ${
+                                    project.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                }">
+                                    ${project.status}
+                                </span>
+                                <button class="text-blue-500 hover:text-blue-700 font-medium">View</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+    </script>
+</body>
+</html>
