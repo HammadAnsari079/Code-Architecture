@@ -1,3 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Analysis Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-12 text-center">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">Code Analysis Tool</h1>
+            <p class="text-gray-600 max-w-2xl mx-auto">Upload your codebase to generate visualizations</p>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Upload Section -->
+            <section class="mb-12">
+                <div class="bg-white rounded-lg shadow-md p-8 max-w-2xl mx-auto">
+                    <h2 class="text-2xl font-semibold mb-6 text-center">Upload Codebase</h2>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors mb-6">
+                        <div class="mb-4">
+                            <svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                        </div>
+                        <p class="text-gray-600 mb-4">Drag & drop your code files or zip folder here</p>
+                        <p class="text-gray-500 text-sm mb-6">Supported formats: .py, .js, .java, .zip</p>
+                        
+                        <div class="flex flex-col sm:flex-row justify-center gap-4">
+                            <button id="browse-files-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-lg transition duration-200">
+                                Browse Files
+                            </button>
+                            <button id="browse-folder-btn" class="bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-6 rounded-lg transition duration-200">
+                                Select Folder
+                            </button>
+                        </div>
+                        
+                        <input type="file" id="file-input" class="hidden" accept=".py,.js,.java,.zip" multiple>
+                        <input type="file" id="folder-input" class="hidden" webkitdirectory multiple>
+                    </div>
+                    
+                    <div id="file-list" class="mt-6 hidden">
+                        <h3 class="text-lg font-medium mb-3">Selected Files:</h3>
+                        <ul id="file-list-items" class="bg-gray-50 rounded-lg p-4 max-h-40 overflow-y-auto mb-4"></ul>
+                        <div class="flex flex-col sm:flex-row justify-center gap-4">
+                            <button id="analyze-btn" class="bg-purple-500 hover:bg-purple-600 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                                Analyze Code Flow
+                            </button>
+                            <button id="database-btn" class="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                                Database Relations
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="upload-progress" class="mt-6 hidden">
+                        <h3 class="text-lg font-medium mb-3">Processing...</h3>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <p id="progress-text" class="text-center mt-2 text-gray-600">0%</p>
+                    </div>
+                    
+                    <div id="upload-result" class="mt-6 hidden">
+                        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+                            <strong class="font-bold">Success! </strong>
+                            <span id="result-message">Files processed successfully.</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
     <script>
         // Get CSRF token
         function getCookie(name) {
@@ -26,6 +102,7 @@
             const fileList = document.getElementById('file-list');
             const fileListItems = document.getElementById('file-list-items');
             const analyzeBtn = document.getElementById('analyze-btn');
+            const databaseBtn = document.getElementById('database-btn');
             const uploadProgress = document.getElementById('upload-progress');
             const progressBar = document.getElementById('progress-bar');
             const progressText = document.getElementById('progress-text');
@@ -126,15 +203,26 @@
             if (analyzeBtn) {
                 analyzeBtn.addEventListener('click', function() {
                     if (selectedFiles.length > 0) {
-                        uploadFiles();
+                        uploadFiles('analyze');
                     } else {
-                        alert('Please select files or folders to analyze.');
+                        alert('Please select files to analyze.');
+                    }
+                });
+            }
+            
+            // Handle database button click
+            if (databaseBtn) {
+                databaseBtn.addEventListener('click', function() {
+                    if (selectedFiles.length > 0) {
+                        uploadFiles('database');
+                    } else {
+                        alert('Please select files to analyze.');
                     }
                 });
             }
             
             // Upload files to the server
-            function uploadFiles() {
+            function uploadFiles(action) {
                 const formData = new FormData();
                 
                 // Add all selected files to the form data
@@ -146,6 +234,9 @@
                         formData.append('files', file, file.name);
                     }
                 });
+                
+                // Add action parameter
+                formData.append('action', action);
                 
                 // Show upload progress
                 fileList.classList.add('hidden');
@@ -165,36 +256,32 @@
                 
                 // Handle response
                 xhr.addEventListener('load', function() {
+                    uploadProgress.classList.add('hidden');
                     if (xhr.status === 200) {
                         const response = JSON.parse(xhr.responseText);
                         if (response.status === 'success') {
-                            // Redirect to visualization page
+                            // Redirect to results page
                             if (response.redirect_url) {
                                 window.location.href = response.redirect_url;
-                            } else if (response.project_id) {
-                                // Fallback if redirect_url is not provided but we have project_id
-                                window.location.href = '/visualization/' + response.project_id + '/';
                             } else {
-                                // Fallback if neither redirect_url nor project_id is provided
-                                resultMessage.textContent = `Successfully processed ${response.total_files} files!`;
+                                resultMessage.textContent = response.message || 'Processing completed successfully!';
                                 uploadResult.classList.remove('hidden');
-                                uploadProgress.classList.add('hidden');
                             }
                         } else {
-                            showError(response.message || 'Upload failed');
+                            showError(response.message || 'Processing failed');
                         }
                     } else {
-                        showError('Upload failed with status: ' + xhr.status);
+                        showError('Processing failed with status: ' + xhr.status);
                     }
                 });
                 
                 // Handle errors
                 xhr.addEventListener('error', function() {
-                    showError('Upload failed due to a network error.');
+                    showError('Processing failed due to a network error.');
                 });
                 
                 // Send the request
-                xhr.open('POST', '/api/upload/');
+                xhr.open('POST', '/simple/api/process/');
                 xhr.setRequestHeader('X-CSRFToken', csrftoken);
                 xhr.send(formData);
             }
@@ -210,7 +297,5 @@
             }
         });
     </script>
-</```
-```
-
-```
+</body>
+</html>

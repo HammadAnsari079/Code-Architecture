@@ -1,36 +1,8 @@
-from django.shortcuts import render, redirect
-from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from django.views import View
-from django.urls import reverse
-import os
-import tempfile
-import json
+from django.http import JsonResponse
 from .utils.file_processor import FileProcessor
-from .utils.analyzer import PythonAnalyzer, JavaScriptAnalyzer, JavaAnalyzer, ArchitectureBuilder
+from .utils.analyzer import EnhancedPythonAnalyzer
 
-def test_view(request):
-    """Simple test view to verify setup"""
-    return JsonResponse({'message': 'Backend is working correctly!'})
-
-def index_view(request):
-    """Main page view"""
-    return render(request, 'simple_index.html')
-    
-def test_template(request):
-    """Test template view"""
-    return render(request, 'test.html')
-
-def visualization_view(request, project_id):
-    """View for displaying visualizations"""
-    # In a real implementation, we would fetch project data from database
-    # For now, we'll pass the project_id to the template
-    context = {
-        'project_id': project_id,
-        'project_name': f'Project {project_id}'
-    }
-    return render(request, 'visualization.html', context)
 
 @csrf_exempt
 def upload_files(request):
@@ -43,12 +15,22 @@ def upload_files(request):
             if not files:
                 return JsonResponse({'status': 'error', 'message': 'No files provided'})
             
-            # Log the number of files for debugging
+            # Log detailed information about received files for debugging
             print(f"Received {len(files)} files for upload")
+            for i, file in enumerate(files):
+                print(f"File {i}: name='{file.name}', size={file.size}, content_type='{getattr(file, 'content_type', 'N/A')}'")
+                # Check if the file has a relative path attribute
+                if hasattr(file, 'webkitRelativePath'):
+                    print(f"  webkitRelativePath: '{file.webkitRelativePath}'")
             
             # Process files using FileProcessor
             processor = FileProcessor()
             processed_files = processor.process_files(files)
+            
+            # Log information about processed files
+            print(f"Processed {len(processed_files)} files")
+            for i, file_info in enumerate(processed_files):
+                print(f"Processed file {i}: name='{file_info['name']}', path='{file_info['path']}', type='{file_info['type']}'")
             
             # Filter to get only code files
             code_files = processor.get_code_files(processed_files)
@@ -58,28 +40,41 @@ def upload_files(request):
             for file_info in code_files:
                 try:
                     if file_info['type'] == 'python':
-                        analyzer = PythonAnalyzer(file_info['path'])
+                        analyzer = EnhancedPythonAnalyzer(file_info['path'])
                         result = analyzer.analyze()
                         analysis_results.append({
                             'file': file_info['name'],
                             'language': 'python',
                             'analysis': result
                         })
+                    # Note: JavaScript and Java analyzers not yet implemented in the new version
                     elif file_info['type'] == 'javascript':
-                        analyzer = JavaScriptAnalyzer(file_info['path'])
-                        result = analyzer.analyze()
+                        # For now, we'll create a placeholder analysis
                         analysis_results.append({
                             'file': file_info['name'],
                             'language': 'javascript',
-                            'analysis': result
+                            'analysis': {
+                                'file_path': file_info['path'],
+                                'file_name': file_info['name'],
+                                'imports': [],
+                                'classes': [],
+                                'functions': [],
+                                'control_flow_graphs': []
+                            }
                         })
                     elif file_info['type'] == 'java':
-                        analyzer = JavaAnalyzer(file_info['path'])
-                        result = analyzer.analyze()
+                        # For now, we'll create a placeholder analysis
                         analysis_results.append({
                             'file': file_info['name'],
                             'language': 'java',
-                            'analysis': result
+                            'analysis': {
+                                'file_path': file_info['path'],
+                                'file_name': file_info['name'],
+                                'imports': [],
+                                'classes': [],
+                                'functions': [],
+                                'control_flow_graphs': []
+                            }
                         })
                 except Exception as e:
                     print(f"Error analyzing {file_info['name']}: {str(e)}")

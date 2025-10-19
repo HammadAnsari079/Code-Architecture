@@ -16,12 +16,16 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from analyzer.views_simple import index_view, test_view, visualization_view
+from analyzer.views_simple_fixed import index_view, test_view, visualization_view, documentation_view
+from django.views.generic import RedirectView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('analyzer.urls')),
+    path('simple/', include('analyzer.urls_simplified')),
+    path('enhanced/', include('analyzer.urls_enhanced')),
     path('test/', test_view, name='test'),
     path('visualization/<int:project_id>/', visualization_view, name='visualization'),
-    path('', index_view, name='index'),
+    path('docs/', documentation_view, name='documentation'),
+    path('', RedirectView.as_view(url='/simple/', permanent=False)),
 ]

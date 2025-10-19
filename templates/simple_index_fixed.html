@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code-to-Architecture Visualizer</title>
+    <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    {% load static %}
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-12 text-center">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">Code-to-Architecture Visualizer</h1>
+            <p class="text-gray-600 max-w-2xl mx-auto">Upload your codebase to automatically generate architecture diagrams, dependency graphs, and data flow visualizations</p>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Upload Section -->
+            <section class="mb-12">
+                <div class="bg-white rounded-lg shadow-md p-8 max-w-2xl mx-auto">
+                    <h2 class="text-2xl font-semibold mb-6 text-center">Upload Codebase</h2>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors mb-6">
+                        <div class="mb-4">
+                            <svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                        </div>
+                        <p class="text-gray-600 mb-4">Drag & drop your codebase files here</p>
+                        <p class="text-gray-500 text-sm mb-6">Supported formats: .zip, .tar.gz, folders, or single code files</p>
+                        
+                        <div class="flex flex-col sm:flex-row justify-center gap-4">
+                            <button id="browse-files-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-lg transition duration-200">
+                                Browse Files
+                            </button>
+                            <button id="browse-folder-btn" class="bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-6 rounded-lg transition duration-200">
+                                Select Folder
+                            </button>
+                        </div>
+                        
+                        <input type="file" id="file-input" class="hidden" accept=".py,.js,.java,.zip,.tar.gz,.tgz" multiple>
+                        <input type="file" id="folder-input" class="hidden" webkitdirectory multiple>
+                    </div>
+                    
+                    <div id="file-list" class="mt-6 hidden">
+                        <h3 class="text-lg font-medium mb-3">Selected Files:</h3>
+                        <ul id="file-list-items" class="bg-gray-50 rounded-lg p-4 max-h-40 overflow-y-auto"></ul>
+                        <button id="analyze-btn" class="mt-4 bg-purple-500 hover:bg-purple-600 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                            Analyze Codebase
+                        </button>
+                    </div>
+                    
+                    <div id="upload-progress" class="mt-6 hidden">
+                        <h3 class="text-lg font-medium mb-3">Analyzing...</h3>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <p id="progress-text" class="text-center mt-2 text-gray-600">0%</p>
+                        <p class="text-center mt-2 text-gray-500 text-sm">Processing and analyzing your code files...</p>
+                    </div>
+                    
+                    <div id="upload-result" class="mt-6 hidden">
+                        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+                            <strong class="font-bold">Success! </strong>
+                            <span id="result-message">Files uploaded successfully.</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Project History Section -->
+            <section class="mb-12">
+                <div class="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto">
+                    <h2 class="text-2xl font-semibold mb-6 text-center">Project History</h2>
+                    {% if projects %}
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project Name</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Files</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for project in projects %}
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-medium text-gray-900">{{ project.name }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-500">{{ project.description|truncatewords:10 }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-500">
+                                            {% with project.codefile_set.count as file_count %}
+                                            {{ file_count }} file{{ file_count|pluralize }}
+                                            {% endwith %}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ project.uploaded_at|date:"M d, Y H:i" }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <a href="{% url 'visualization' project.id %}" class="text-indigo-600 hover:text-indigo-900">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <p class="text-gray-500">No projects uploaded yet. Upload your first codebase to get started!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Documentation Section -->
+            <section class="mb-12">
+                <div class="bg-white rounded-lg shadow-md p-8 max-w-2xl mx-auto">
+                    <h2 class="text-2xl font-semibold mb-6 text-center">Technical Documentation</h2>
+                    <div class="prose max-w-none text-center">
+                        <p class="mb-6">View detailed technical documentation about how the system processes uploaded folders, database relationships, and project architecture.</p>
+                        <a href="/docs/" class="inline-block bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-3 px-6 rounded-lg transition duration-200">
+                            View Technical Documentation
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Features Section -->
+            <section class="mb-16">
+                <h2 class="text-3xl font-bold text-center mb-12 text-gray-800">Key Features</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                        <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">Code Analysis</h3>
+                        <p class="text-gray-600">Automatically parse and analyze Python, JavaScript, and Java codebases</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                        <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">Visualizations</h3>
+                        <p class="text-gray-600">Generate interactive architecture diagrams, dependency graphs, and data flow visualizations</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                        <div class="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">Insights</h3>
+                        <p class="text-gray-600">Get code metrics, complexity analysis, and refactoring suggestions</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="text-center text-gray-500 text-sm py-8 border-t border-gray-200">
+            <p>Code-to-Architecture Visualizer &copy; 2025</p>
+        </footer>
+    </div>
+
+    <script>
+        // Get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        const csrftoken = getCookie('csrftoken');
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const browseFilesBtn = document.getElementById('browse-files-btn');
+            const browseFolderBtn = document.getElementById('browse-folder-btn');
+            const fileInput = document.getElementById('file-input');
+            const folderInput = document.getElementById('folder-input');
+            const fileList = document.getElementById('file-list');
+            const fileListItems = document.getElementById('file-list-items');
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const uploadProgress = document.getElementById('upload-progress');
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const uploadResult = document.getElementById('upload-result');
+            const resultMessage = document.getElementById('result-message');
+            
+            let selectedFiles = [];
+            
+            // Event listeners for file selection
+            if (browseFilesBtn && fileInput) {
+                browseFilesBtn.addEventListener('click', function() {
+                    fileInput.click();
+                });
+            }
+            
+            if (browseFolderBtn && folderInput) {
+                browseFolderBtn.addEventListener('click', function() {
+                    folderInput.click();
+                });
+            }
+            
+            // Handle file input change
+            if (fileInput) {
+                fileInput.addEventListener('change', function(e) {
+                    handleFiles(e.target.files, false);
+                });
+            }
+            
+            // Handle folder input change
+            if (folderInput) {
+                folderInput.addEventListener('change', function(e) {
+                    handleFiles(e.target.files, true);
+                });
+            }
+            
+            // Handle drag and drop
+            const dropArea = document.querySelector('.border-2.border-dashed');
+            if (dropArea) {
+                dropArea.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    dropArea.classList.add('border-blue-500', 'bg-blue-50');
+                });
+                
+                dropArea.addEventListener('dragleave', function() {
+                    dropArea.classList.remove('border-blue-500', 'bg-blue-50');
+                });
+                
+                dropArea.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    dropArea.classList.remove('border-blue-500', 'bg-blue-50');
+                    handleFiles(e.dataTransfer.files, false);
+                });
+            }
+            
+            // Handle files (from any source)
+            function handleFiles(files, isFolder) {
+                if (files.length > 0) {
+                    selectedFiles = Array.from(files);
+                    updateFileList(isFolder);
+                    fileList.classList.remove('hidden');
+                }
+            }
+            
+            // Update the file list display
+            function updateFileList(isFolder) {
+                fileListItems.innerHTML = '';
+                selectedFiles.forEach((file, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'py-2 border-b border-gray-200 flex justify-between items-center';
+                    
+                    // For folder uploads, try to show the full path
+                    let displayName = file.name;
+                    if (isFolder && file.webkitRelativePath) {
+                        displayName = file.webkitRelativePath;
+                    } else if (file.webkitRelativePath) {
+                        // Also check for webkitRelativePath even if not explicitly marked as folder
+                        displayName = file.webkitRelativePath;
+                    }
+                    
+                    li.innerHTML = `
+                        <span class="truncate mr-2">${displayName}</span>
+                        <span class="text-gray-500 text-sm">${formatFileSize(file.size)}</span>
+                    `;
+                    fileListItems.appendChild(li);
+                });
+            }
+            
+            // Format file size for display
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            // Handle analyze button click
+            if (analyzeBtn) {
+                analyzeBtn.addEventListener('click', function() {
+                    if (selectedFiles.length > 0) {
+                        uploadFiles();
+                    } else {
+                        alert('Please select files or folders to analyze.');
+                    }
+                });
+            }
+            
+            // Upload files to the server
+            function uploadFiles() {
+                const formData = new FormData();
+                
+                // Add all selected files to the form data
+                selectedFiles.forEach((file, index) => {
+                    // Preserve folder structure by using webkitRelativePath if available
+                    if (file.webkitRelativePath) {
+                        formData.append('files', file, file.webkitRelativePath);
+                    } else {
+                        formData.append('files', file, file.name);
+                    }
+                });
+                
+                // Show upload progress
+                fileList.classList.add('hidden');
+                uploadProgress.classList.remove('hidden');
+                
+                // Create XMLHttpRequest for upload progress tracking
+                const xhr = new XMLHttpRequest();
+                
+                // Update progress bar
+                xhr.upload.addEventListener('progress', function(e) {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        progressBar.style.width = percentComplete + '%';
+                        progressText.textContent = Math.round(percentComplete) + '%';
+                    }
+                });
+                
+                // Handle response
+                xhr.addEventListener('load', function() {
+                    if (xhr.status === 200) {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.status === 'success') {
+                            // Redirect to visualization page
+                            if (response.redirect_url) {
+                                window.location.href = response.redirect_url;
+                            } else if (response.project_id) {
+                                // Fallback if redirect_url is not provided but we have project_id
+                                window.location.href = '/visualization/' + response.project_id + '/';
+                            } else {
+                                // Fallback if neither redirect_url nor project_id is provided
+                                resultMessage.textContent = `Successfully processed ${response.total_files} files!`;
+                                uploadResult.classList.remove('hidden');
+                                uploadProgress.classList.add('hidden');
+                                
+                                // Refresh page after 2 seconds to show updated project list
+                                setTimeout(function() {
+                                    location.reload();
+                                }, 2000);
+                            }
+                        } else {
+                            showError(response.message || 'Upload failed');
+                        }
+                    } else {
+                        showError('Upload failed with status: ' + xhr.status);
+                    }
+                });
+                
+                // Handle errors
+                xhr.addEventListener('error', function() {
+                    showError('Upload failed due to a network error.');
+                });
+                
+                // Send the request
+                xhr.open('POST', '/api/upload/');
+                xhr.setRequestHeader('X-CSRFToken', csrftoken);
+                xhr.send(formData);
+            }
+            
+            // Show error message
+            function showError(message) {
+                uploadProgress.classList.add('hidden');
+                resultMessage.textContent = message;
+                uploadResult.classList.remove('hidden');
+                uploadResult.className = uploadResult.className.replace('bg-green-100', 'bg-red-100');
+                uploadResult.className = uploadResult.className.replace('border-green-400', 'border-red-400');
+                uploadResult.className = uploadResult.className.replace('text-green-700', 'text-red-700');
+            }
+        });
+    </script>
+</body>
+</html>

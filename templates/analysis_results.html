@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Results</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .node {
+            stroke: #000;
+            stroke-width: 1px;
+        }
+        .link {
+            stroke: #000;
+            stroke-opacity: 0.6;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .file-node { fill: #ffffff; }
+        .class-node { fill: #f0f0f0; }
+        .function-node { fill: #e0e0e0; }
+        .database-node { fill: #d0d0d0; }
+        .table-node { fill: #ffffff; }
+        
+        /* Scrollable container for visualizations */
+        .viz-container {
+            overflow: auto;
+            position: relative;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: white;
+            scroll-behavior: smooth;
+        }
+        
+        /* Zoom and pan controls */
+        .viz-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .viz-controls button {
+            margin: 3px;
+            padding: 6px 10px;
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .viz-controls button:hover {
+            background: #e8e8e8;
+            border-color: #ccc;
+        }
+        
+        /* Download button */
+        .download-btn {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 5px;
+        }
+        
+        .download-btn:hover {
+            background: #4338ca;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Analysis Results</h1>
+            <p class="text-gray-600">Project: {{ project_name }}</p>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="mb-8">
+            <div class="border-b border-gray-200">
+                <nav class="flex space-x-8">
+                    <button class="tab-button py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 active" data-tab="flowchart">
+                        Code Flow Chart
+                    </button>
+                    <button class="tab-button py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="database">
+                        Database Relations
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Flowchart Tab -->
+        <div id="flowchart" class="tab-content active">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Code Flow Visualization</h2>
+                <div id="flowchart-container" class="viz-container h-screen">
+                    <div class="viz-controls">
+                        <button id="flowchart-zoom-in">Zoom In (+)</button>
+                        <button id="flowchart-zoom-out">Zoom Out (-)</button>
+                        <button id="flowchart-reset">Reset View</button>
+                        <button id="flowchart-download" class="download-btn">Download SVG</button>
+                    </div>
+                    <div class="text-center h-full flex items-center justify-center">
+                        <div>
+                            <p class="text-gray-500 mb-4">Generating flowchart...</p>
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 prose max-w-none">
+                    <p>This flowchart shows the step-by-step process of how your code is analyzed:</p>
+                    <ul class="list-disc pl-5 mt-2">
+                        <li><strong>White Rectangles</strong> represent process steps</li>
+                        <li><strong>Light Gray Ovals</strong> represent classes/components</li>
+                        <li><strong>Dark Gray Boxes</strong> represent functions</li>
+                        <li><strong>Cylinders</strong> represent database entities</li>
+                        <li><strong>Black Lines</strong> show the flow and relationships</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Database Tab -->
+        <div id="database" class="tab-content">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Database Relationships</h2>
+                <div id="database-container" class="viz-container h-screen">
+                    <div class="viz-controls">
+                        <button id="database-zoom-in">Zoom In (+)</button>
+                        <button id="database-zoom-out">Zoom Out (-)</button>
+                        <button id="database-reset">Reset View</button>
+                        <button id="database-download" class="download-btn">Download SVG</button>
+                    </div>
+                    <div class="text-center h-full flex items-center justify-center">
+                        <div>
+                            <p class="text-gray-500 mb-4">Generating database diagram...</p>
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 prose max-w-none">
+                    <p>This diagram shows how data is organized and related in your system:</p>
+                    <ul class="list-disc pl-5 mt-2">
+                        <li><strong>Tables</strong> represent data entities with their fields</li>
+                        <li><strong>Lines with Arrows</strong> show relationships between tables</li>
+                        <li><strong>Labels</strong> indicate relationship types (One-to-Many, Many-to-One, etc.)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables to store SVG elements for download
+        let flowchartSvg = null;
+        let databaseSvg = null;
+        
+        // Tab switching functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Remove active class from all buttons and contents
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // Add active class to clicked button
+                    button.classList.add('active');
+                    
+                    // Show corresponding content
+                    const tabId = button.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                    
+                    // Load visualization for the selected tab
+                    if (tabId === 'flowchart') {
+                        loadFlowchart();
+                    } else if (tabId === 'database') {
+                        loadDatabaseDiagram();
+                    }
+                });
+            });
+            
+            // Load initial flowchart
+            loadFlowchart();
+        });
+        
+        // Load flowchart visualization
+        function loadFlowchart() {
+            const container = document.getElementById('flowchart-container');
+            container.innerHTML = '<div class="viz-controls"><button id="flowchart-zoom-in">Zoom In (+)</button><button id="flowchart-zoom-out">Zoom Out (-)</button><button id="flowchart-reset">Reset View</button><button id="flowchart-download" class="download-btn">Download SVG</button></div><div class="text-center h-full flex items-center justify-center"><div><p class="text-gray-500 mb-4">Loading flowchart...</p><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div></div></div>';
+            
+            // Fetch flowchart data
+            fetch('/simple/api/flowchart/{{ project_id }}/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        renderFlowchart(data.graph_data);
+                    } else {
+                        container.innerHTML = '<div class="text-red-500 text-center h-full flex items-center justify-center">Error loading flowchart: ' + data.message + '</div>';
+                    }
+                })
+                .catch(error => {
+                    container.innerHTML = '<div class="text-red-500 text-center h-full flex items-center justify-center">Error loading flowchart: ' + error.message + '</div>';
+                });
+        }
+        
+        // Load database diagram
+        function loadDatabaseDiagram() {
+            const container = document.getElementById('database-container');
+            container.innerHTML = '<div class="viz-controls"><button id="database-zoom-in">Zoom In (+)</button><button id="database-zoom-out">Zoom Out (-)</button><button id="database-reset">Reset View</button><button id="database-download" class="download-btn">Download SVG</button></div><div class="text-center h-full flex items-center justify-center"><div><p class="text-gray-500 mb-4">Loading database diagram...</p><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div></div></div>';
+            
+            // Fetch database data
+            fetch('/simple/api/database/{{ project_id }}/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        renderDatabaseDiagram(data.graph_data);
+                    } else {
+                        container.innerHTML = '<div class="text-red-500 text-center h-full flex items-center justify-center">Error loading database diagram: ' + data.message + '</div>';
+                    }
+                })
+                .catch(error => {
+                    container.innerHTML = '<div class="text-red-500 text-center h-full flex items-center justify-center">Error loading database diagram: ' + error.message + '</div>';
+                });
+        }
+        
+        // Render flowchart using D3.js with mixed vertical and horizontal layout
+        function renderFlowchart(graphData) {
+            const container = document.getElementById('flowchart-container');
+            container.innerHTML = '<div class="viz-controls"><button id="flowchart-zoom-in">Zoom In (+)</button><button id="flowchart-zoom-out">Zoom Out (-)</button><button id="flowchart-reset">Reset View</button><button id="flowchart-download" class="download-btn">Download SVG</button></div>';
+            
+            // Set up SVG with fixed size for better control
+            const width = Math.max(container.clientWidth, 2000);
+            const height = Math.max(container.clientHeight, 1500);
+            
+            const svg = d3.select("#flowchart-container")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("class", "bg-white")
+                .attr("id", "flowchart-svg");
+            
+            // Store reference for download
+            flowchartSvg = svg;
+            
+            // Create zoom behavior
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 5])
+                .on("zoom", (event) => {
+                    g.attr("transform", event.transform);
+                });
+            
+            svg.call(zoom);
+            
+            // Create a group for all elements to apply zoom
+            const g = svg.append("g");
+            
+            // Position nodes in a mixed layout with horizontal branching
+            const nodeMap = {};
+            
+            // Define positions for different sections
+            const sections = {
+                "start": {x: width/2, y: 100},
+                "process": {x: width/2, y: 200},
+                "analyze_options": {x: width/2, y: 350},
+                "syntax_analysis": {x: width/4, y: 450},
+                "component_analysis": {x: width/2, y: 450},
+                "dependency_analysis": {x: 3*width/4, y: 450},
+                "storage": {x: width/2, y: 600},
+                "visualization": {x: width/2, y: 750},
+                "presentation": {x: width/2, y: 850},
+                "database": {x: width/2, y: 1000}
+            };
+            
+            graphData.nodes.forEach((node, i) => {
+                nodeMap[node.id] = node;
+                
+                // Position nodes based on their section
+                if (node.id === "start") {
+                    node.fx = sections.start.x;
+                    node.fy = sections.start.y;
+                } else if (["receive", "process_branch", "extract", "organize"].includes(node.id)) {
+                    node.fx = sections.process.x;
+                    node.fy = sections.process.y + (["receive", "process_branch", "extract", "organize"].indexOf(node.id) * 100);
+                } else if (node.id === "analyze_options") {
+                    node.fx = sections.analyze_options.x;
+                    node.fy = sections.analyze_options.y;
+                } else if (["syntax_option", "parse_syntax", "validate_syntax"].includes(node.id)) {
+                    node.fx = sections.syntax_analysis.x;
+                    node.fy = sections.syntax_analysis.y + (["syntax_option", "parse_syntax", "validate_syntax"].indexOf(node.id) * 100);
+                } else if (["component_option", "find_components", "identify_functions", "identify_classes"].includes(node.id)) {
+                    node.fx = sections.component_analysis.x;
+                    node.fy = sections.component_analysis.y + (["component_option", "find_components", "identify_functions", "identify_classes"].indexOf(node.id) * 100);
+                } else if (["dependency_option", "map_dependencies", "trace_calls", "find_imports"].includes(node.id)) {
+                    node.fx = sections.dependency_analysis.x;
+                    node.fy = sections.dependency_analysis.y + (["dependency_option", "map_dependencies", "trace_calls", "find_imports"].indexOf(node.id) * 100);
+                } else if (["store_data", "save_project", "save_files", "save_components", "save_dependencies"].includes(node.id)) {
+                    node.fx = sections.storage.x;
+                    node.fy = sections.storage.y + (["store_data", "save_project", "save_files", "save_components", "save_dependencies"].indexOf(node.id) * 80);
+                } else if (["generate_viz", "build_graph", "create_layout"].includes(node.id)) {
+                    node.fx = sections.visualization.x;
+                    node.fy = sections.visualization.y + (["generate_viz", "build_graph", "create_layout"].indexOf(node.id) * 100);
+                } else if (["present", "render_flow", "render_db", "display"].includes(node.id)) {
+                    node.fx = sections.presentation.x;
+                    node.fy = sections.presentation.y + (["present", "render_flow", "render_db", "display"].indexOf(node.id) * 100);
+                } else if (["user_data", "project_data", "file_data", "component_data", "dependency_data"].includes(node.id)) {
+                    // Position database entities to the right
+                    const dbIndex = ["user_data", "project_data", "file_data", "component_data", "dependency_data"].indexOf(node.id);
+                    node.fx = width - 300;
+                    node.fy = 400 + dbIndex * 120;
+                } else {
+                    // Default positioning
+                    node.fx = width/2;
+                    node.fy = 1200 + i * 50;
+                }
+            });
+            
+            // Create force simulation with fixed positions
+            const simulation = d3.forceSimulation(graphData.nodes)
+                .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(150))
+                .force("charge", d3.forceManyBody().strength(-300))
+                .force("center", d3.forceCenter(width / 2, height / 2));
+            
+            // Fix all nodes in place
+            simulation.on("tick", () => {
+                graphData.nodes.forEach(node => {
+                    node.x = node.fx;
+                    node.y = node.fy;
+                });
+            });
+            
+            // Draw links
+            const link = g.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(graphData.links)
+                .enter()
+                .append("line")
+                .attr("class", "link")
+                .attr("stroke-width", 2);
+            
+            // Add arrow markers
+            svg.append("defs").append("marker")
+                .attr("id", "arrowhead")
+                .attr("viewBox", "-0 -5 10 10")
+                .attr("refX", 32)
+                .attr("refY", 0)
+                .attr("orient", "auto")
+                .attr("markerWidth", 8)
+                .attr("markerHeight", 8)
+                .attr("xoverflow", "visible")
+                .append("svg:path")
+                .attr("d", "M 0,-5 L 10,0 L 0,5")
+                .attr("fill", "#000")
+                .style("stroke", "none");
+            
+            link.attr("marker-end", "url(#arrowhead)");
+            
+            // Draw nodes
+            const node = g.append("g")
+                .attr("class", "nodes")
+                .selectAll("g")
+                .data(graphData.nodes)
+                .enter()
+                .append("g")
+                .attr("class", "node");
+            
+            // Add shapes based on node type
+            node.filter(d => d.type === 'file')
+                .append("rect")
+                .attr("width", d => Math.max(200, d.name.length * 10))
+                .attr("height", 65)
+                .attr("x", d => -Math.max(100, d.name.length * 5))
+                .attr("y", -32.5)
+                .attr("rx", 10)
+                .attr("ry", 10)
+                .attr("class", "file-node")
+                .attr("stroke", "#000")
+                .attr("stroke-width", 2);
+            
+            node.filter(d => d.type === 'class')
+                .append("ellipse")
+                .attr("rx", d => Math.max(110, d.name.length * 6))
+                .attr("ry", 45)
+                .attr("class", "class-node")
+                .attr("stroke", "#000")
+                .attr("stroke-width", 2);
+            
+            node.filter(d => d.type === 'function')
+                .append("rect")
+                .attr("width", d => Math.max(200, d.name.length * 10))
+                .attr("height", 55)
+                .attr("x", d => -Math.max(100, d.name.length * 5))
+                .attr("y", -27.5)
+                .attr("rx", 6)
+                .attr("ry", 6)
+                .attr("class", "function-node")
+                .attr("stroke", "#000")
+                .attr("stroke-width", 1.5);
+            
+            node.filter(d => d.type === 'database')
+                .append("rect")
+                .attr("width", d => Math.max(180, d.name.length * 10))
+                .attr("height", 60)
+                .attr("x", d => -Math.max(90, d.name.length * 5))
+                .attr("y", -30)
+                .attr("rx", 25)
+                .attr("ry", 25)
+                .attr("class", "database-node")
+                .attr("stroke", "#000")
+                .attr("stroke-width", 2);
+            
+            // Add labels
+            node.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", 5)
+                .text(d => d.name)
+                .attr("font-size", "15px")
+                .attr("fill", "#000")
+                .attr("font-family", "Arial, sans-serif")
+                .attr("font-weight", d => d.type === 'file' ? 'bold' : 'normal');
+            
+            // Add type indicators
+            node.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", d => {
+                    if (d.type === 'file') return 25;
+                    if (d.type === 'class') return 45;
+                    if (d.type === 'function') return 30;
+                    if (d.type === 'database') return 35;
+                    return 25;
+                })
+                .text(d => `[${d.type}]`)
+                .attr("font-size", "12px")
+                .attr("fill", "#666")
+                .attr("font-family", "Arial, sans-serif")
+                .attr("font-style", "italic");
+            
+            // Position nodes
+            node.attr("transform", d => `translate(${d.fx},${d.fy})`);
+            
+            // Update link positions
+            simulation.on("tick", () => {
+                link
+                    .attr("x1", d => nodeMap[d.source.id].fx)
+                    .attr("y1", d => nodeMap[d.source.id].fy)
+                    .attr("x2", d => nodeMap[d.target.id].fx)
+                    .attr("y2", d => nodeMap[d.target.id].fy);
+            });
+            
+            // Zoom controls
+            document.getElementById('flowchart-zoom-in').addEventListener('click', () => {
+                svg.transition().duration(300).call(zoom.scaleBy, 1.2);
+            });
+            
+            document.getElementById('flowchart-zoom-out').addEventListener('click', () => {
+                svg.transition().duration(300).call(zoom.scaleBy, 0.8);
+            });
+            
+            document.getElementById('flowchart-reset').addEventListener('click', () => {
+                svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
+            });
+            
+            // Download functionality
+            document.getElementById('flowchart-download').addEventListener('click', () => {
+                downloadSvg(svg.node(), 'code-flowchart.svg');
+            });
+        }
+        
+        // Render database diagram using D3.js with vertical layout
+        function renderDatabaseDiagram(graphData) {
+            const container = document.getElementById('database-container');
+            container.innerHTML = '<div class="viz-controls"><button id="database-zoom-in">Zoom In (+)</button><button id="database-zoom-out">Zoom Out (-)</button><button id="database-reset">Reset View</button><button id="database-download" class="download-btn">Download SVG</button></div>';
+            
+            // Set up SVG with fixed size for better control
+            const width = Math.max(container.clientWidth, 1500);
+            const height = Math.max(container.clientHeight, 2000);
+            
+            const svg = d3.select("#database-container")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("class", "bg-white")
+                .attr("id", "database-svg");
+            
+            // Store reference for download
+            databaseSvg = svg;
+            
+            // Create zoom behavior
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 5])
+                .on("zoom", (event) => {
+                    g.attr("transform", event.transform);
+                });
+            
+            svg.call(zoom);
+            
+            // Create a group for all elements to apply zoom
+            const g = svg.append("g");
+            
+            // Position nodes in a vertical layout
+            const nodeMap = {};
+            const verticalSpacing = 400;
+            
+            graphData.nodes.forEach((node, i) => {
+                nodeMap[node.id] = node;
+                // Vertical layout - nodes in one column
+                node.fx = width / 2;
+                node.fy = 200 + i * verticalSpacing;
+            });
+            
+            // Create force simulation with fixed positions
+            const simulation = d3.forceSimulation(graphData.nodes)
+                .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(300))
+                .force("charge", d3.forceManyBody().strength(-500))
+                .force("center", d3.forceCenter(width / 2, height / 2));
+            
+            // Fix all nodes in place
+            simulation.on("tick", () => {
+                graphData.nodes.forEach(node => {
+                    node.x = node.fx;
+                    node.y = node.fy;
+                });
+            });
+            
+            // Draw links with labels
+            const linkGroup = g.append("g")
+                .attr("class", "links")
+                .selectAll("g")
+                .data(graphData.links)
+                .enter()
+                .append("g");
+            
+            // Add link lines
+            const link = linkGroup.append("line")
+                .attr("class", "link")
+                .attr("stroke-width", 3);
+            
+            // Add arrow markers
+            svg.append("defs").append("marker")
+                .attr("id", "db-arrowhead")
+                .attr("viewBox", "-0 -5 10 10")
+                .attr("refX", 25)
+                .attr("refY", 0)
+                .attr("orient", "auto")
+                .attr("markerWidth", 10)
+                .attr("markerHeight", 10)
+                .attr("xoverflow", "visible")
+                .append("svg:path")
+                .attr("d", "M 0,-5 L 10,0 L 0,5")
+                .attr("fill", "#000")
+                .style("stroke", "none");
+            
+            link.attr("marker-end", "url(#db-arrowhead)");
+            
+            // Add link labels
+            const linkLabels = linkGroup.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", -15)
+                .attr("font-size", "16px")
+                .attr("fill", "#000")
+                .attr("font-family", "Arial, sans-serif")
+                .attr("font-weight", "bold")
+                .text(d => d.cardinality || "rel");
+            
+            // Draw nodes (tables)
+            const node = g.append("g")
+                .attr("class", "nodes")
+                .selectAll("g")
+                .data(graphData.nodes)
+                .enter()
+                .append("g")
+                .attr("class", "node");
+            
+            // Add table rectangles with proper sizing
+            node.each(function(d) {
+                const nodeGroup = d3.select(this);
+                const fieldCount = d.fields ? d.fields.length : 0;
+                const tableHeight = 80 + (fieldCount * 35);
+                const tableWidth = Math.max(350, (d.name.length + 20) * 14);
+                
+                // Table container
+                nodeGroup.append("rect")
+                    .attr("class", "table-node")
+                    .attr("width", tableWidth)
+                    .attr("height", tableHeight)
+                    .attr("x", -tableWidth/2)
+                    .attr("y", -40)
+                    .attr("rx", 12)
+                    .attr("ry", 12)
+                    .attr("stroke", "#000")
+                    .attr("stroke-width", 2);
+                
+                // Header section
+                nodeGroup.append("rect")
+                    .attr("width", tableWidth)
+                    .attr("height", 40)
+                    .attr("x", -tableWidth/2)
+                    .attr("y", -40)
+                    .attr("fill", "#000");
+                
+                // Table name
+                nodeGroup.append("text")
+                    .attr("text-anchor", "middle")
+                    .attr("dy", -18)
+                    .text(d.name)
+                    .attr("font-size", "20px")
+                    .attr("font-weight", "bold")
+                    .attr("fill", "#fff")
+                    .attr("font-family", "Arial, sans-serif");
+                
+                // Fields
+                if (d.fields) {
+                    d.fields.forEach((field, i) => {
+                        // Field name
+                        nodeGroup.append("text")
+                            .attr("text-anchor", "start")
+                            .attr("x", -tableWidth/2 + 25)
+                            .attr("y", 15 + i * 35)
+                            .text(field)
+                            .attr("font-size", "16px")
+                            .attr("fill", "#000")
+                            .attr("font-family", "Courier New, monospace");
+                        
+                        // Divider line
+                        if (i < d.fields.length - 1) {
+                            nodeGroup.append("line")
+                                .attr("x1", -tableWidth/2 + 20)
+                                .attr("y1", 25 + i * 35)
+                                .attr("x2", tableWidth/2 - 20)
+                                .attr("y2", 25 + i * 35)
+                                .attr("stroke", "#ccc")
+                                .attr("stroke-width", 1);
+                        }
+                    });
+                }
+            });
+            
+            // Position nodes
+            node.attr("transform", d => `translate(${d.fx},${d.fy})`);
+            
+            // Update link positions
+            simulation.on("tick", () => {
+                link
+                    .attr("x1", d => nodeMap[d.source.id].fx)
+                    .attr("y1", d => nodeMap[d.source.id].fy)
+                    .attr("x2", d => nodeMap[d.target.id].fx)
+                    .attr("y2", d => nodeMap[d.target.id].fy);
+                
+                linkLabels
+                    .attr("x", d => (nodeMap[d.source.id].fx + nodeMap[d.target.id].fx) / 2)
+                    .attr("y", d => (nodeMap[d.source.id].fy + nodeMap[d.target.id].fy) / 2);
+            });
+            
+            // Zoom controls
+            document.getElementById('database-zoom-in').addEventListener('click', () => {
+                svg.transition().duration(300).call(zoom.scaleBy, 1.2);
+            });
+            
+            document.getElementById('database-zoom-out').addEventListener('click', () => {
+                svg.transition().duration(300).call(zoom.scaleBy, 0.8);
+            });
+            
+            document.getElementById('database-reset').addEventListener('click', () => {
+                svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
+            });
+            
+            // Download functionality
+            document.getElementById('database-download').addEventListener('click', () => {
+                downloadSvg(svg.node(), 'database-relationships.svg');
+            });
+        }
+
+        // Download SVG function
+        function downloadSvg(svgElement, filename) {
+            // Get SVG data
+            const serializer = new XMLSerializer();
+            let source = serializer.serializeToString(svgElement);
+            
+            // Add namespace if needed
+            if (!source.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {
+                source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+            }
+            
+            // Add xmlns:xlink if needed
+            if (!source.match(/^<svg[^>]+"http:\/\/www\.w3\.org\/1999\/xlink"/)) {
+                source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+            }
+            
+            // Convert to blob
+            const blob = new Blob([source], {type: "image/svg+xml;charset=utf-8"});
+            const url = URL.createObjectURL(blob);
+            
+            // Create download link
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Clean up
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

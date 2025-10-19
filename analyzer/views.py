@@ -17,7 +17,7 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from .models import Project, AnalysisResult, CodeFile, Dependency, Component
 from .utils.file_handler import FileHandler
-from .utils.analyzer import PythonAnalyzer, JavaScriptAnalyzer, JavaAnalyzer, ArchitectureBuilder
+from .utils.analyzer import EnhancedPythonAnalyzer, DatabaseSchemaExtractor, ProjectAnalyzer
 from .utils.graph_generator import GraphGenerator
 from .utils.mermaid_generator import MermaidGenerator
 from .utils.metrics_calculator import MetricsCalculator
@@ -80,7 +80,7 @@ def analyze_code(request, project_id):
         # Analyze Python files
         for file_info in language_files.get('python', []):
             try:
-                analyzer = PythonAnalyzer(file_info['path'])
+                analyzer = EnhancedPythonAnalyzer(file_info['path'])
                 result = analyzer.analyze()
                 
                 analysis_results['file_analysis'].append({
@@ -115,10 +115,12 @@ def analyze_code(request, project_id):
         )
         
         # Build architecture
-        architecture_builder = ArchitectureBuilder(analysis_results)
-        architecture_pattern = architecture_builder.detect_architecture_pattern()
-        component_diagram = architecture_builder.generate_component_diagram()
-        dependency_graph = architecture_builder.build_dependency_graph()
+        # Using ProjectAnalyzer instead of ArchitectureBuilder
+        project_analyzer = ProjectAnalyzer(os.path.dirname(project.file_path))
+        architecture_pattern = project_analyzer.detect_architecture_pattern()
+        # For now, we'll create placeholder diagrams
+        component_diagram = {'nodes': [], 'edges': []}
+        dependency_graph = {'nodes': [], 'edges': []}
         
         # Store architecture results
         AnalysisResult.objects.create(

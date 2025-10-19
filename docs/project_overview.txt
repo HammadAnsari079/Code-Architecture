@@ -1,0 +1,106 @@
+# Code-to-Architecture Visualizer - Project Overview
+
+## What This Project Does
+
+This Django web application processes uploaded code folders and generates architectural visualizations. When a user uploads a folder containing source code files, the system:
+
+1. **Processes the Upload**: Extracts and organizes files from the uploaded folder
+2. **Analyzes Code**: Uses Python's AST (Abstract Syntax Tree) module to parse Python files and extract structural information
+3. **Builds Architecture Data**: Creates component diagrams and dependency graphs from the analysis
+4. **Stores Results**: Saves all processed data to a database for later retrieval
+5. **Enables Visualization**: Provides data that can be used to generate interactive diagrams
+
+## Detailed Workflow
+
+### File Processing
+- Handles individual files and archives (.zip, .tar.gz)
+- Identifies code files by extension (.py, .js, .java)
+- Extracts file content and metadata
+
+### Code Analysis (Python)
+- Uses Python's built-in `ast` module to parse code
+- Extracts imports, classes, functions, and method definitions
+- Builds call graphs showing function relationships
+- Captures docstrings and other code documentation
+
+### Data Modeling
+- Stores project metadata in `Project` table
+- Saves individual files in `CodeFile` table
+- Records dependencies in `Dependency` table
+- Captures code components in `Component` table
+- Stores analysis results in `AnalysisResult` table
+
+### Architecture Building
+- Generates component diagrams showing file structure
+- Creates dependency graphs showing module relationships
+- Prepares data for visualization in multiple formats (D3, Cytoscape)
+
+## Technology Stack & Libraries
+
+### Backend
+- **Django**: Web framework providing MVC architecture, ORM, and URL routing
+- **Python AST**: Built-in library for parsing Python source code into abstract syntax trees
+- **SQLite**: Default database engine for data persistence
+
+### Frontend
+- **HTML/CSS/JavaScript**: Core web technologies for user interface
+- **Tailwind CSS**: Utility-first CSS framework for styling
+- **D3.js**: JavaScript library for creating dynamic data visualizations
+- **Cytoscape.js**: Graph theory library for network visualization
+
+### Analysis Libraries
+- **ast**: Python standard library module for parsing Python code
+  * Purpose: Converts Python source code into a tree representation that can be analyzed
+  * Usage: Extracting classes, functions, imports, and call relationships
+
+### File Processing
+- **zipfile**: Python standard library for handling ZIP archives
+  * Purpose: Extracting files from uploaded .zip archives
+- **tarfile**: Python standard library for handling TAR archives
+  * Purpose: Extracting files from uploaded .tar.gz archives
+- **tempfile**: Python standard library for temporary file management
+  * Purpose: Storing uploaded files during processing
+
+## How to Get Better Results
+
+1. **Upload Complete Projects**: Include all related files for comprehensive analysis
+2. **Use Python Files**: The system has full support for Python; JavaScript and Java have placeholder support
+3. **Organized Structure**: Well-structured projects with clear module relationships produce better diagrams
+4. **Proper Imports**: Use explicit imports to help the system detect dependencies accurately
+5. **Meaningful Names**: Use descriptive names for classes and functions to improve diagram readability
+
+## Key Components
+
+### FileProcessor (file_processor.py)
+Handles file extraction and organization:
+- Processes uploaded files
+- Extracts archives
+- Identifies code files by extension
+- Manages temporary file storage
+
+### PythonAnalyzer (analyzer.py)
+Analyzes Python code using AST:
+- Parses Python files into syntax trees
+- Extracts imports, classes, functions
+- Builds call graphs
+- Returns structured analysis data
+
+### ArchitectureBuilder (analyzer.py)
+Generates architecture data:
+- Creates component diagrams
+- Builds dependency graphs
+- Detects architectural patterns
+
+### GraphGenerator (graph_generator.py)
+Converts data for visualization:
+- Formats data for D3.js
+- Formats data for Cytoscape.js
+- Prepares Sankey diagrams for data flow
+
+### Database Models (models.py)
+Stores processed data:
+- Project: Main container for uploads
+- CodeFile: Individual code files
+- Dependency: Module relationships
+- Component: Code elements (classes, functions)
+- AnalysisResult: Processed analysis data

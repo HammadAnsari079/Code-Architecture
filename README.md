@@ -53,10 +53,20 @@ A web application that analyzes uploaded codebases and automatically generates s
 
 ## Usage
 
+### Standard Interface
 1. Upload a codebase archive (.zip or .tar.gz)
 2. The system will automatically analyze the code
 3. View generated architecture diagrams, dependency graphs, and data flow visualizations
 4. Explore code metrics and insights
+
+### Simplified Interface
+For a streamlined experience with just the essentials:
+1. Navigate to `/simple/`
+2. Upload your code files or zip folder
+3. Choose either "Analyze Code Flow" or "Database Relations"
+4. View the generated visualizations
+
+See `README_SIMPLIFIED.md` for more details on the simplified interface.
 
 ## API Endpoints
 

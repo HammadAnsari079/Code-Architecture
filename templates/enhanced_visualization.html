@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Code Visualization - {{ project_name }}</title>
+    <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.0/cytoscape.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .cytoscape-container {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        
+        .code-snippet {
+            font-family: 'Courier New', monospace;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+            padding: 12px;
+            overflow-x: auto;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .code-line {
+            padding: 2px 0;
+        }
+        
+        .code-line.target {
+            background-color: #fff3cd;
+            border-left: 3px solid #ffc107;
+            padding-left: 8px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .tab-button {
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab-button.active {
+            border-bottom: 2px solid #3b82f6;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        
+        .sidebar {
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar.collapsed {
+            width: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-white shadow">
+            <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
+                <h1 class="text-3xl font-bold text-gray-900">Code Architecture Visualizer</h1>
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-600">Project: {{ project_name }}</span>
+                    <a href="{% url 'index' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded">
+                        <i class="fas fa-home mr-2"></i>Home
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-grow flex">
+            <!-- Sidebar -->
+            <div id="sidebar" class="sidebar w-80 bg-white shadow-lg p-4 overflow-y-auto">
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold mb-4">Visualization Controls</h2>
+                    
+                    <!-- Function Selection -->
+                    <div class="mb-6">
+                        <h3 class="font-semibold mb-2">Select Function</h3>
+                        <div class="flex">
+                            <select id="file-select" class="flex-grow border rounded-l px-3 py-2">
+                                <option value="">Select file...</option>
+                                <option value="example.py">example.py</option>
+                                <option value="models.py">models.py</option>
+                                <option value="views.py">views.py</option>
+                            </select>
+                            <select id="function-select" class="flex-grow border-t border-b border-r rounded-r px-3 py-2">
+                                <option value="">Select function...</option>
+                                <option value="process_order">process_order</option>
+                                <option value="login">login</option>
+                                <option value="register">register</option>
+                            </select>
+                        </div>
+                        <button id="generate-flowchart-btn" class="mt-2 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+                            <i class="fas fa-project-diagram mr-2"></i>Generate Flowchart
+                        </button>
+                    </div>
+                    
+                    <!-- Code Snippet Panel -->
+                    <div id="code-snippet-panel" class="hidden border rounded-lg p-4 bg-gray-50">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-semibold">Code Snippet</h3>
+                            <button id="close-snippet-btn" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="text-sm mb-2">
+                            <span id="snippet-file-path" class="font-mono text-blue-600"></span>
+                            <span id="snippet-line-number" class="ml-2 bg-yellow-100 text-yellow-800 px-2 py-1 rounded"></span>
+                        </div>
+                        <div id="code-snippet-content" class="code-snippet"></div>
+                        <button id="jump-to-code-btn" class="mt-3 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
+                            <i class="fas fa-external-link-alt mr-2"></i>Jump to Code
+                        </button>
+                    </div>
+                    
+                    <!-- Relationship Details Panel -->
+                    <div id="relationship-panel" class="hidden border rounded-lg p-4 bg-gray-50">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-semibold">Relationship Details</h3>
+                            <button id="close-relationship-btn" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="relationship-details" class="text-sm"></div>
+                        <button id="jump-to-fk-btn" class="mt-3 w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded">
+                            <i class="fas fa-external-link-alt mr-2"></i>Jump to Foreign Key Definition
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Legend -->
+                <div class="border-t pt-4">
+                    <h3 class="font-semibold mb-2">Legend</h3>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded-full bg-green-500 mr-2"></div>
+                            <span>Start/End</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded bg-blue-500 mr-2"></div>
+                            <span>Process</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 transform rotate-45 bg-orange-500 mr-2"></div>
+                            <span>Decision</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded bg-pink-500 mr-2"></div>
+                            <span>Table</span>
+                        </div>
+                        <div class="flex items-center col-span-2">
+                            <div class="w-8 h-0.5 bg-purple-500 mr-2"></div>
+                            <span>Foreign Key</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="flex-grow p-6">
+                <!-- Tabs -->
+                <div class="border-b border-gray-200 mb-6">
+                    <nav class="flex space-x-8">
+                        <button id="flowchart-tab" class="tab-button active py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-sitemap mr-2"></i>Function Flow
+                        </button>
+                        <button id="erd-tab" class="tab-button py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-database mr-2"></i>Database Schema
+                        </button>
+                        <button id="architecture-tab" class="tab-button py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-project-diagram mr-2"></i>Architecture
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Tab Content -->
+                <div id="flowchart-content" class="tab-content active">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold">Function Flowchart</h2>
+                        <div class="flex space-x-2">
+                            <button id="export-flowchart-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded">
+                                <i class="fas fa-download mr-2"></i>Export
+                            </button>
+                            <button id="toggle-sidebar-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded">
+                                <i class="fas fa-chevron-left mr-2"></i>Sidebar
+                            </button>
+                        </div>
+                    </div>
+                    <div id="flowchart-container" class="cytoscape-container"></div>
+                    <div id="flowchart-loading" class="hidden text-center py-8">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                        <p class="text-gray-600">Generating flowchart...</p>
+                    </div>
+                </div>
+
+                <div id="erd-content" class="tab-content">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold">Database ERD</h2>
+                        <div class="flex space-x-2">
+                            <button id="export-erd-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded">
+                                <i class="fas fa-download mr-2"></i>Export
+                            </button>
+                            <button id="toggle-sidebar-btn-erd" class="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded">
+                                <i class="fas fa-chevron-left mr-2"></i>Sidebar
+                            </button>
+                        </div>
+                    </div>
+                    <div id="erd-container" class="cytoscape-container"></div>
+                    <div id="erd-loading" class="hidden text-center py-8">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+                        <p class="text-gray-600">Generating database schema...</p>
+                    </div>
+                </div>
+
+                <div id="architecture-content" class="tab-content">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold">Architecture Diagram</h2>
+                        <button id="toggle-sidebar-btn-arch" class="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded">
+                            <i class="fas fa-chevron-left mr-2"></i>Sidebar
+                        </button>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <p class="text-gray-600">Architecture diagram visualization would appear here.</p>
+                        <p class="text-gray-500 text-sm mt-2">This section shows the overall architecture of your codebase with components, modules, and their relationships.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t">
+            <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+                <p class="text-center text-gray-500 text-sm">
+                    Code Architecture Visualizer &copy; 2023
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Initialize Cytoscape layouts
+        cytoscape.use(cytoscapeDagre);
+        
+        // Global variables
+        let flowchartCy = null;
+        let erdCy = null;
+        let sidebarCollapsed = false;
+        
+        // DOM Elements
+        const flowchartTab = document.getElementById('flowchart-tab');
+        const erdTab = document.getElementById('erd-tab');
+        const architectureTab = document.getElementById('architecture-tab');
+        const flowchartContent = document.getElementById('flowchart-content');
+        const erdContent = document.getElementById('erd-content');
+        const architectureContent = document.getElementById('architecture-content');
+        const sidebar = document.getElementById('sidebar');
+        const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
+        const toggleSidebarBtnErd = document.getElementById('toggle-sidebar-btn-erd');
+        const toggleSidebarBtnArch = document.getElementById('toggle-sidebar-btn-arch');
+        
+        // Tab switching functionality
+        function switchTab(tabName) {
+            // Hide all tab contents
+            flowchartContent.classList.remove('active');
+            erdContent.classList.remove('active');
+            architectureContent.classList.remove('active');
+            
+            // Remove active class from all tabs
+            flowchartTab.classList.remove('active');
+            erdTab.classList.remove('active');
+            architectureTab.classList.remove('active');
+            
+            // Show selected tab content and mark tab as active
+            if (tabName === 'flowchart') {
+                flowchartContent.classList.add('active');
+                flowchartTab.classList.add('active');
+            } else if (tabName === 'erd') {
+                erdContent.classList.add('active');
+                erdTab.classList.add('active');
+            } else if (tabName === 'architecture') {
+                architectureContent.classList.add('active');
+                architectureTab.classList.add('active');
+            }
+        }
+        
+        // Toggle sidebar
+        function toggleSidebar() {
+            sidebarCollapsed = !sidebarCollapsed;
+            if (sidebarCollapsed) {
+                sidebar.classList.add('collapsed');
+                toggleSidebarBtn.innerHTML = '<i class="fas fa-chevron-right mr-2"></i>Sidebar';
+                toggleSidebarBtnErd.innerHTML = '<i class="fas fa-chevron-right mr-2"></i>Sidebar';
+                toggleSidebarBtnArch.innerHTML = '<i class="fas fa-chevron-right mr-2"></i>Sidebar';
+            } else {
+                sidebar.classList.remove('collapsed');
+                toggleSidebarBtn.innerHTML = '<i class="fas fa-chevron-left mr-2"></i>Sidebar';
+                toggleSidebarBtnErd.innerHTML = '<i class="fas fa-chevron-left mr-2"></i>Sidebar';
+                toggleSidebarBtnArch.innerHTML = '<i class="fas fa-chevron-left mr-2"></i>Sidebar';
+            }
+        }
+        
+        // Initialize flowchart
+        function initFlowchart() {
+            flowchartCy = cytoscape({
+                container: document.getElementById('flowchart-container'),
+                elements: [],
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'width': 100,
+                            'height': 40,
+                            'background-color': '#ddd',
+                            'label': 'data(label)',
+                            'text-valign': 'center',
+                            'text-halign': 'center',
+                            'font-size': 12,
+                            'color': '#333',
+                            'border-width': 1,
+                            'border-color': '#999'
+                        }
+                    },
+                    {
+                        selector: '.start-node, .end-node',
+                        style: {
+                            'shape': 'ellipse',
+                            'background-color': '#4CAF50',
+                            'color': 'white',
+                            'font-weight': 'bold'
+                        }
+                    },
+                    {
+                        selector: '.process-node',
+                        style: {
+                            'shape': 'round-rectangle',
+                            'background-color': '#2196F3',
+                            'color': 'white'
+                        }
+                    },
+                    {
+                        selector: '.decision-node',
+                        style: {
+                            'shape': 'diamond',
+                            'background-color': '#FF9800',
+                            'color': 'white',
+                            'width': 80,
+                            'height': 80
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 2,
+                            'line-color': '#666',
+                            'target-arrow-color': '#666',
+                            'target-arrow-shape': 'triangle',
+                            'curve-style': 'bezier',
+                            'label': 'data(label)',
+                            'font-size': 10,
+                            'color': '#333'
+                        }
+                    },
+                    {
+                        selector: 'node:hover',
+                        style: {
+                            'overlay-color': '#4CAF50',
+                            'overlay-opacity': 0.3,
+                            'border-width': 2,
+                            'border-color': '#4CAF50'
+                        }
+                    },
+                    {
+                        selector: 'node:selected',
+                        style: {
+                            'border-width': 3,
+                            'border-color': '#FF5722'
+                        }
+                    }
+                ],
+                layout: {
+                    name: 'dagre',
+                    rankDir: 'TB',
+                    rankSep: 100,
+                    nodeSep: 50,
+                    edgeSep: 50
+                }
+            });
+            
+            // Add click handlers
+            flowchartCy.on('tap', 'node', function(evt) {
+                const node = evt.target;
+                showCodeSnippet(node);
+            });
+        }
+        
+        // Initialize ERD
+        function initERD() {
+            erdCy = cytoscape({
+                container: document.getElementById('erd-container'),
+                elements: [],
+                style: [
+                    {
+                        selector: '.table-node',
+                        style: {
+                            'shape': 'round-rectangle',
+                            'background-color': '#FFFFFF',
+                            'color': '#333',
+                            'width': 200,
+                            'height': 150,
+                            'border-width': 2,
+                            'border-color': '#333',
+                            'label': 'data(label)',
+                            'text-valign': 'top',
+                            'text-halign': 'center',
+                            'font-size': 14,
+                            'font-weight': 'bold'
+                        }
+                    },
+                    {
+                        selector: '.foreign-key-edge',
+                        style: {
+                            'width': 2,
+                            'line-color': '#9C27B0',
+                            'target-arrow-color': '#9C27B0',
+                            'target-arrow-shape': 'triangle',
+                            'curve-style': 'bezier',
+                            'line-style': 'solid'
+                        }
+                    },
+                    {
+                        selector: '.table-node:hover',
+                        style: {
+                            'overlay-color': '#2196F3',
+                            'overlay-opacity': 0.2
+                        }
+                    },
+                    {
+                        selector: '.foreign-key-edge:hover',
+                        style: {
+                            'width': 4,
+                            'line-color': '#2196F3',
+                            'target-arrow-color': '#2196F3'
+                        }
+                    },
+                    {
+                        selector: '.table-node:selected',
+                        style: {
+                            'border-width': 3,
+                            'border-color': '#FF5722',
+                            'background-color': '#FFF3E0'
+                        }
+                    },
+                    {
+                        selector: '.foreign-key-edge:selected',
+                        style: {
+                            'width': 4,
+                            'line-color': '#FF5722',
+                            'target-arrow-color': '#FF5722'
+                        }
+                    }
+                ],
+                layout: {
+                    name: 'cose',
+                    animate: true,
+                    nodeRepulsion: 400000,
+                    idealEdgeLength: 100,
+                    nodeOverlap: 20,
+                    refresh: 20,
+                    fit: true,
+                    padding: 30
+                }
+            });
+            
+            // Add click handlers for tables
+            erdCy.on('tap', '.table-node', function(evt) {
+                const node = evt.target;
+                highlightTableRelationships(node);
+            });
+            
+            // Add click handlers for relationships
+            erdCy.on('tap', '.foreign-key-edge', function(evt) {
+                const edge = evt.target;
+                showRelationshipDetails(edge);
+            });
+        }
+        
+        // Show code snippet panel
+        function showCodeSnippet(node) {
+            const codeSnippetPanel = document.getElementById('code-snippet-panel');
+            const filePath = node.data('file_path') || 'Unknown file';
+            const lineNumber = node.data('line_number') || 1;
+            
+            // Update panel content
+            document.getElementById('snippet-file-path').textContent = filePath;
+            document.getElementById('snippet-line-number').textContent = `Line ${lineNumber}`;
+            
+            // Show panel
+            codeSnippetPanel.classList.remove('hidden');
+            
+            // In a real implementation, we would fetch the actual code snippet
+            // For now, we'll simulate with sample content
+            const snippetContent = document.getElementById('code-snippet-content');
+            snippetContent.innerHTML = `
+                <div class="code-line">def process_order(order_id):</div>
+                <div class="code-line">    order = Order.objects.get(id=order_id)</div>
+                <div class="code-line target">    if order.status != 'pending':  # Selected line</div>
+                <div class="code-line">        return False</div>
+                <div class="code-line">    if order.total > 1000:</div>
+                <div class="code-line">        order.priority = 'high'</div>
+                <div class="code-line">    else:</div>
+                <div class="code-line">        order.priority = 'normal'</div>
+            `;
+        }
+        
+        // Highlight table relationships
+        function highlightTableRelationships(node) {
+            // Dim all elements
+            erdCy.elements().style('opacity', 0.3);
+            
+            // Highlight selected table
+            node.style({
+                'opacity': 1,
+                'border-width': 3,
+                'border-color': '#FF5722',
+                'background-color': '#FFF3E0'
+            });
+            
+            // Highlight connected edges
+            const connectedEdges = node.connectedEdges();
+            connectedEdges.style({
+                'opacity': 1,
+                'width': 4,
+                'line-color': '#2196F3',
+                'target-arrow-color': '#2196F3'
+            });
+            
+            // Highlight connected nodes
+            const connectedNodes = connectedEdges.connectedNodes();
+            connectedNodes.style({
+                'opacity': 1
+            });
+        }
+        
+        // Show relationship details
+        function showRelationshipDetails(edge) {
+            const relationshipPanel = document.getElementById('relationship-panel');
+            const detailsContainer = document.getElementById('relationship-details');
+            
+            // Update panel content
+            detailsContainer.innerHTML = `
+                <div class="mb-2"><strong>From:</strong> ${edge.data('source_field') || 'Unknown'}</div>
+                <div class="mb-2"><strong>To:</strong> ${edge.data('target_field') || 'Unknown'}</div>
+                <div class="mb-2"><strong>Type:</strong> Foreign Key</div>
+                <div class="mb-2"><strong>On Delete:</strong> ${edge.data('on_delete') || 'CASCADE'}</div>
+                <div class="mb-2"><strong>File:</strong> ${edge.data('source_file') || 'models.py'}</div>
+                <div><strong>Line:</strong> ${edge.data('source_line') || '1'}</div>
+            `;
+            
+            // Show panel
+            relationshipPanel.classList.remove('hidden');
+        }
+        
+        // Close panels
+        document.getElementById('close-snippet-btn').addEventListener('click', function() {
+            document.getElementById('code-snippet-panel').classList.add('hidden');
+        });
+        
+        document.getElementById('close-relationship-btn').addEventListener('click', function() {
+            document.getElementById('relationship-panel').classList.add('hidden');
+            // Reset ERD highlighting
+            if (erdCy) {
+                erdCy.elements().style('opacity', 1);
+            }
+        });
+        
+        // Jump to code functionality
+        document.getElementById('jump-to-code-btn').addEventListener('click', function() {
+            alert('In a real implementation, this would open the file in your code editor at the specified line.');
+        });
+        
+        document.getElementById('jump-to-fk-btn').addEventListener('click', function() {
+            alert('In a real implementation, this would open the models.py file at the foreign key definition.');
+        });
+        
+        // Export functionality
+        document.getElementById('export-flowchart-btn').addEventListener('click', function() {
+            alert('In a real implementation, this would export the flowchart as PNG/SVG/PDF.');
+        });
+        
+        document.getElementById('export-erd-btn').addEventListener('click', function() {
+            alert('In a real implementation, this would export the ERD as PNG/SVG/PDF.');
+        });
+        
+        // Generate flowchart
+        document.getElementById('generate-flowchart-btn').addEventListener('click', function() {
+            const fileSelect = document.getElementById('file-select');
+            const functionSelect = document.getElementById('function-select');
+            
+            if (!fileSelect.value || !functionSelect.value) {
+                alert('Please select both a file and a function.');
+                return;
+            }
+            
+            // Show loading indicator
+            document.getElementById('flowchart-loading').classList.remove('hidden');
+            document.getElementById('flowchart-container').classList.add('hidden');
+            
+            // In a real implementation, we would make an AJAX request to get the flowchart data
+            // For now, we'll simulate with sample data
+            setTimeout(function() {
+                // Hide loading indicator
+                document.getElementById('flowchart-loading').classList.add('hidden');
+                document.getElementById('flowchart-container').classList.remove('hidden');
+                
+                // Sample flowchart data
+                const sampleData = {
+                    nodes: [
+                        { data: { id: 'start', label: 'START (process_order)', type: 'start' } },
+                        { data: { id: 'get_order', label: 'Get order from database', type: 'process' } },
+                        { data: { id: 'check_status', label: "Is status == 'pending'?", type: 'decision' } },
+                        { data: { id: 'return_false', label: 'Return False', type: 'process' } },
+                        { data: { id: 'check_total', label: 'Is total > 1000?', type: 'decision' } },
+                        { data: { id: 'set_high', label: "Set priority = 'high'", type: 'process' } },
+                        { data: { id: 'set_normal', label: "Set priority = 'normal'", type: 'process' } },
+                        { data: { id: 'set_status', label: "Set status = 'processing'", type: 'process' } },
+                        { data: { id: 'save_order', label: 'Save order', type: 'process' } },
+                        { data: { id: 'return_true', label: 'Return True', type: 'process' } },
+                        { data: { id: 'end', label: 'END', type: 'end' } }
+                    ],
+                    edges: [
+                        { data: { source: 'start', target: 'get_order' } },
+                        { data: { source: 'get_order', target: 'check_status' } },
+                        { data: { source: 'check_status', target: 'return_false', label: 'NO' } },
+                        { data: { source: 'return_false', target: 'end' } },
+                        { data: { source: 'check_status', target: 'check_total', label: 'YES' } },
+                        { data: { source: 'check_total', target: 'set_high', label: 'YES' } },
+                        { data: { source: 'check_total', target: 'set_normal', label: 'NO' } },
+                        { data: { source: 'set_high', target: 'set_status' } },
+                        { data: { source: 'set_normal', target: 'set_status' } },
+                        { data: { source: 'set_status', target: 'save_order' } },
+                        { data: { source: 'save_order', target: 'return_true' } },
+                        { data: { source: 'return_true', target: 'end' } }
+                    ]
+                };
+                
+                // Load data into Cytoscape
+                flowchartCy.elements().remove();
+                flowchartCy.add(sampleData);
+                flowchartCy.layout({
+                    name: 'dagre',
+                    rankDir: 'TB',
+                    rankSep: 100,
+                    nodeSep: 50,
+                    edgeSep: 50
+                }).run();
+            }, 1500);
+        });
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            initFlowchart();
+            initERD();
+            
+            // Tab event listeners
+            flowchartTab.addEventListener('click', function() { switchTab('flowchart'); });
+            erdTab.addEventListener('click', function() { switchTab('erd'); });
+            architectureTab.addEventListener('click', function() { switchTab('architecture'); });
+            
+            // Sidebar toggle event listeners
+            toggleSidebarBtn.addEventListener('click', toggleSidebar);
+            toggleSidebarBtnErd.addEventListener('click', toggleSidebar);
+            toggleSidebarBtnArch.addEventListener('click', toggleSidebar);
+        });
+    </script>
+</body>
+</html>

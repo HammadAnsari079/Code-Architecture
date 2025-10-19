@@ -15,8 +15,15 @@ class FileProcessor:
         processed_files = []
         
         for file in files:
-            filename = os.path.basename(file.name)
+            # Get the filename - Django's UploadedFile has a name attribute
+            # For folder uploads, this should preserve the full path
+            filename = file.name
+            
+            # Create the full path in our temp directory
             file_path = os.path.join(self.temp_dir, filename)
+            
+            # Create directories if needed to preserve folder structure
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
             
             # Save the file
             with open(file_path, 'wb+') as destination:

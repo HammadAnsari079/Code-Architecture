@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Visualizer Documentation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Code-to-Architecture Visualizer</h1>
+            <p class="text-gray-600">Technical Documentation</p>
+        </header>
+
+        <!-- Navigation -->
+        <div class="flex flex-wrap gap-2 mb-6">
+            <button class="tab-btn bg-blue-500 text-white px-4 py-2 rounded" onclick="showTab('flow')">Upload Process Flow</button>
+            <button class="tab-btn bg-gray-200 px-4 py-2 rounded" onclick="showTab('database')">Database Flow</button>
+            <button class="tab-btn bg-gray-200 px-4 py-2 rounded" onclick="showTab('overview')">Project Overview</button>
+        </div>
+
+        <!-- Content Containers -->
+        <div id="flow-tab" class="tab-content">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold mb-4">User Folder Upload Processing Flow</h2>
+                <div class="border border-gray-200 rounded p-4 bg-gray-50 overflow-x-auto">
+                    <pre class="whitespace-pre-wrap text-sm">{{ upload_flow }}</pre>
+                </div>
+            </div>
+        </div>
+
+        <div id="database-tab" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold mb-4">Database Table Relationships</h2>
+                <div class="border border-gray-200 rounded p-4 bg-gray-50 overflow-x-auto">
+                    <pre class="whitespace-pre-wrap text-sm">{{ database_flow }}</pre>
+                </div>
+            </div>
+        </div>
+
+        <div id="overview-tab" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold mb-4">Project Overview</h2>
+                <div class="border border-gray-200 rounded p-4 bg-gray-50 overflow-x-auto">
+                    <pre class="whitespace-pre-wrap text-sm">{{ project_overview }}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Remove active styling from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-500', 'text-white');
+                btn.classList.add('bg-gray-200');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.remove('hidden');
+            
+            // Add active styling to selected button
+            event.target.classList.add('bg-blue-500', 'text-white');
+            event.target.classList.remove('bg-gray-200');
+        }
+    </script>
+</body>
+</html>

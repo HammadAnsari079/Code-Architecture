@@ -1,0 +1,71 @@
+@startuml
+' Database Flow - Table Relationships
+
+entity "User" as user {
+  + id [PK]
+  username
+  email
+  password
+}
+
+entity "Project" as project {
+  + id [PK]
+  name
+  description
+  uploaded_at
+  file_path
+  status
+  uploaded_by [FK]
+}
+
+entity "CodeFile" as codefile {
+  + id [PK]
+  file_path
+  language
+  size
+  content
+  project_id [FK]
+}
+
+entity "Dependency" as dependency {
+  + id [PK]
+  source_module
+  target_module
+  dependency_type
+  project_id [FK]
+}
+
+entity "Component" as component {
+  + id [PK]
+  name
+  component_type
+  file_path
+  line_number
+  relationships
+  project_id [FK]
+}
+
+entity "AnalysisResult" as analysis {
+  + id [PK]
+  analysis_type
+  result_data
+  created_at
+  project_id [FK]
+}
+
+' Relationships
+user ||--o{ project : uploads
+project ||--o{ codefile : contains
+project ||--o{ dependency : has
+project ||--o{ component : has
+project ||--o{ analysis : generates
+
+' Legend
+note top of user : Django auth user
+note top of project : Uploaded codebase
+note top of codefile : Individual code files
+note top of dependency : Module dependencies
+note top of component : Code elements (classes, functions)
+note top of analysis : Processed analysis data
+
+@enduml
