@@ -254,139 +254,121 @@
                     });
             }
         }
-        
+
         // Load ERD diagram
         function loadERD() {
             const container = document.getElementById('erd-container');
             container.innerHTML = '<div class="text-center"><p class="text-gray-500 mb-4">Generating ERD...</p><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div></div>';
             
-            // Simulate loading delay
-            setTimeout(() => {
-                // Create a simple ERD using Cytoscape.js
-                container.innerHTML = '<div id="cy-erd" style="width: 100%; height: 100%;"></div>';
-                
-                const cy = cytoscape({
-                    container: document.getElementById('cy-erd'),
-                    elements: [
-                        // Tables
-                        { data: { id: 'user', label: 'User' }, classes: 'table' },
-                        { data: { id: 'order', label: 'Order' }, classes: 'table' },
-                        { data: { id: 'product', label: 'Product' }, classes: 'table' },
-                        { data: { id: 'order_item', label: 'OrderItem' }, classes: 'table' },
+            fetch(`/erd/${currentProjectId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        container.innerHTML = '<div id="cy-erd" style="width: 100%; height: 100%;"></div>';
                         
-                        // Fields
-                        { data: { id: 'user_id', label: 'id (PK)' }, classes: 'field pk' },
-                        { data: { id: 'user_name', label: 'username' }, classes: 'field' },
-                        { data: { id: 'user_email', label: 'email' }, classes: 'field' },
-                        
-                        { data: { id: 'order_id', label: 'id (PK)' }, classes: 'field pk' },
-                        { data: { id: 'order_user_id', label: 'user_id (FK)' }, classes: 'field fk' },
-                        { data: { id: 'order_total', label: 'total' }, classes: 'field' },
-                        
-                        { data: { id: 'product_id', label: 'id (PK)' }, classes: 'field pk' },
-                        { data: { id: 'product_name', label: 'name' }, classes: 'field' },
-                        { data: { id: 'product_price', label: 'price' }, classes: 'field' },
-                        
-                        { data: { id: 'oi_id', label: 'id (PK)' }, classes: 'field pk' },
-                        { data: { id: 'oi_order_id', label: 'order_id (FK)' }, classes: 'field fk' },
-                        { data: { id: 'oi_product_id', label: 'product_id (FK)' }, classes: 'field fk' },
-                        { data: { id: 'oi_quantity', label: 'quantity' }, classes: 'field' },
-                        
-                        // Relationships
-                        { data: { source: 'user', target: 'user_id' } },
-                        { data: { source: 'user', target: 'user_name' } },
-                        { data: { source: 'user', target: 'user_email' } },
-                        
-                        { data: { source: 'order', target: 'order_id' } },
-                        { data: { source: 'order', target: 'order_user_id' } },
-                        { data: { source: 'order', target: 'order_total' } },
-                        
-                        { data: { source: 'product', target: 'product_id' } },
-                        { data: { source: 'product', target: 'product_name' } },
-                        { data: { source: 'product', target: 'product_price' } },
-                        
-                        { data: { source: 'order_item', target: 'oi_id' } },
-                        { data: { source: 'order_item', target: 'oi_order_id' } },
-                        { data: { source: 'order_item', target: 'oi_product_id' } },
-                        { data: { source: 'order_item', target: 'oi_quantity' } },
-                        
-                        // Foreign key relationships
-                        { data: { source: 'order_user_id', target: 'user_id', label: 'FK' }, classes: 'relationship' },
-                        { data: { source: 'oi_order_id', target: 'order_id', label: 'FK' }, classes: 'relationship' },
-                        { data: { source: 'oi_product_id', target: 'product_id', label: 'FK' }, classes: 'relationship' }
-                    ],
-                    style: [
-                        {
-                            selector: 'node.table',
-                            style: {
-                                'background-color': '#4a90e2',
-                                'label': 'data(label)',
-                                'color': '#fff',
-                                'text-valign': 'top',
-                                'text-halign': 'center',
-                                'width': 120,
-                                'height': 30,
-                                'shape': 'round-rectangle'
+                        const cy = cytoscape({
+                            container: document.getElementById('cy-erd'),
+                            elements: data.data,
+                            style: [
+                                {
+                                    selector: 'node.table',
+                                    style: {
+                                        'background-color': '#2563eb', // Blue-600
+                                        'label': 'data(label)',
+                                        'color': '#fff',
+                                        'text-valign': 'top',
+                                        'text-halign': 'center',
+                                        'width': 'label',
+                                        'height': 'label',
+                                        'padding': '10px',
+                                        'shape': 'round-rectangle',
+                                        'font-weight': 'bold'
+                                    }
+                                },
+                                {
+                                    selector: 'node.field',
+                                    style: {
+                                        'background-color': '#f3f4f6', // Gray-100
+                                        'label': 'data(label)',
+                                        'color': '#1f2937', // Gray-800
+                                        'text-valign': 'center',
+                                        'text-halign': 'left',
+                                        'width': 'label',
+                                        'height': 'label',
+                                        'padding': '5px',
+                                        'shape': 'rectangle',
+                                        'font-size': 12,
+                                        'border-width': 1,
+                                        'border-color': '#e5e7eb'
+                                    }
+                                },
+                                {
+                                    selector: 'node.field.pk',
+                                    style: {
+                                        'background-color': '#d1fae5', // Green-100
+                                        'border-color': '#10b981', // Green-500
+                                        'color': '#065f46' // Green-800
+                                    }
+                                },
+                                {
+                                    selector: 'node.field.fk',
+                                    style: {
+                                        'background-color': '#ffedd5', // Orange-100
+                                        'border-color': '#f97316', // Orange-500
+                                        'color': '#9a3412' // Orange-800
+                                    }
+                                },
+                                {
+                                    selector: 'edge',
+                                    style: {
+                                        'width': 1.5,
+                                        'line-color': '#9ca3af', // Gray-400
+                                        'curve-style': 'bezier',
+                                        'target-arrow-shape': 'triangle',
+                                        'target-arrow-color': '#9ca3af'
+                                    }
+                                },
+                                {
+                                    selector: 'edge.relationship',
+                                    style: {
+                                        'width': 2,
+                                        'line-color': '#6b7280', // Gray-500
+                                        'target-arrow-color': '#6b7280',
+                                        'label': 'data(label)',
+                                        'text-background-color': '#fff',
+                                        'text-background-opacity': 0.8,
+                                        'font-size': 10
+                                    }
+                                }
+                            ],
+                            layout: {
+                                name: 'cose',
+                                animate: true,
+                                idealEdgeLength: 100,
+                                nodeOverlap: 20,
+                                refresh: 20,
+                                fit: true,
+                                padding: 30,
+                                randomize: false,
+                                componentSpacing: 100,
+                                nodeRepulsion: 400000,
+                                edgeElasticity: 100,
+                                nestingFactor: 5,
+                                gravity: 80,
+                                numIter: 1000,
+                                initialTemp: 200,
+                                coolingFactor: 0.95,
+                                minTemp: 1.0
                             }
-                        },
-                        {
-                            selector: 'node.field',
-                            style: {
-                                'background-color': '#f0f0f0',
-                                'label': 'data(label)',
-                                'color': '#333',
-                                'text-valign': 'center',
-                                'text-halign': 'left',
-                                'text-margin-x': 5,
-                                'width': 120,
-                                'height': 25,
-                                'shape': 'round-rectangle',
-                                'font-size': 12
-                            }
-                        },
-                        {
-                            selector: 'node.field.pk',
-                            style: {
-                                'background-color': '#50c878',
-                                'color': '#fff'
-                            }
-                        },
-                        {
-                            selector: 'node.field.fk',
-                            style: {
-                                'background-color': '#ffa500',
-                                'color': '#fff'
-                            }
-                        },
-                        {
-                            selector: 'edge',
-                            style: {
-                                'width': 1,
-                                'line-color': '#888',
-                                'curve-style': 'bezier'
-                            }
-                        },
-                        {
-                            selector: 'edge.relationship',
-                            style: {
-                                'width': 2,
-                                'line-color': '#ff6347',
-                                'target-arrow-color': '#ff6347',
-                                'target-arrow-shape': 'triangle',
-                                'curve-style': 'bezier',
-                                'label': 'data(label)',
-                                'text-background-color': '#fff',
-                                'text-background-opacity': 1
-                            }
-                        }
-                    ],
-                    layout: {
-                        name: 'cola',
-                        animate: true,
-                        refresh: 50
+                        });
+                    } else {
+                        container.innerHTML = `<div class="text-center text-red-500"><p>Error: ${data.message}</p></div>`;
                     }
+                })
+                .catch(error => {
+                    console.error('Error fetching ERD data:', error);
+                    container.innerHTML = '<div class="text-center text-red-500"><p>Error loading ERD data</p></div>';
                 });
-            }, 1000);
         }
 
         // Improved Visualization functions with better spacing and clarity
@@ -394,311 +376,145 @@
             const container = document.getElementById('dependency-graph-container');
             container.innerHTML = '<div class="text-center"><p class="text-gray-500 mb-4">Generating dependency graph...</p><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div></div>';
             
-            // Simulate loading delay
-            setTimeout(() => {
-                // Create a clean, organized flowchart-style dependency graph
-                container.innerHTML = '<div id="cy-dependency" style="width: 100%; height: 100%;"></div>';
-                
-                const cy = cytoscape({
-                    container: document.getElementById('cy-dependency'),
-                    elements: [
-                        // Entry point
-                        { data: { id: 'main.py', label: 'main.py' }, classes: 'file' },
+            fetch(`/dependency/${currentProjectId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        container.innerHTML = '<div id="cy-dependency" style="width: 100%; height: 100%;"></div>';
                         
-                        // Core application
-                        { data: { id: 'app.py', label: 'app.py' }, classes: 'file' },
-                        
-                        // Core modules (same level)
-                        { data: { id: 'models.py', label: 'models.py' }, classes: 'file' },
-                        { data: { id: 'views.py', label: 'views.py' }, classes: 'file' },
-                        { data: { id: 'utils.py', label: 'utils.py' }, classes: 'file' },
-                        
-                        // Folders (next level)
-                        { data: { id: 'controllers/', label: 'controllers/' }, classes: 'folder' },
-                        { data: { id: 'services/', label: 'services/' }, classes: 'folder' },
-                        
-                        // Folder contents
-                        { data: { id: 'user.py', label: 'user.py' }, classes: 'file' },
-                        { data: { id: 'auth.py', label: 'auth.py' }, classes: 'file' },
-                        { data: { id: 'email.py', label: 'email.py' }, classes: 'file' },
-                        { data: { id: 'payment.py', label: 'payment.py' }, classes: 'file' },
-                        
-                        // Configuration (bottom)
-                        { data: { id: 'config/', label: 'config/' }, classes: 'folder' },
-                        { data: { id: 'settings.py', label: 'settings.py' }, classes: 'file' },
-                        { data: { id: 'database.py', label: 'database.py' }, classes: 'file' },
-                        
-                        // Links
-                        { data: { source: 'main.py', target: 'app.py' } },
-                        { data: { source: 'app.py', target: 'models.py' } },
-                        { data: { source: 'app.py', target: 'views.py' } },
-                        { data: { source: 'app.py', target: 'utils.py' } },
-                        { data: { source: 'app.py', target: 'controllers/' } },
-                        { data: { source: 'app.py', target: 'services/' } },
-                        { data: { source: 'app.py', target: 'config/' } },
-                        
-                        // Controllers
-                        { data: { source: 'controllers/', target: 'user.py' } },
-                        { data: { source: 'controllers/', target: 'auth.py' } },
-                        { data: { source: 'user.py', target: 'services/' } },
-                        { data: { source: 'auth.py', target: 'services/' } },
-                        
-                        // Services
-                        { data: { source: 'services/', target: 'email.py' } },
-                        { data: { source: 'services/', target: 'payment.py' } },
-                        
-                        // Configuration
-                        { data: { source: 'config/', target: 'settings.py' } },
-                        { data: { source: 'settings.py', target: 'database.py' } },
-                        
-                        // Cross-references
-                        { data: { source: 'views.py', target: 'models.py' } },
-                        { data: { source: 'user.py', target: 'models.py' } }
-                    ],
-                    style: [
-                        {
-                            selector: 'node.file',
-                            style: {
-                                'background-color': '#4ecdc4',
-                                'label': 'data(label)',
-                                'color': '#fff',
-                                'text-valign': 'center',
-                                'text-halign': 'center',
-                                'width': 100,
-                                'height': 30,
-                                'shape': 'round-rectangle'
+                        const cy = cytoscape({
+                            container: document.getElementById('cy-dependency'),
+                            elements: data.data,
+                            style: [
+                                {
+                                    selector: 'node.file',
+                                    style: {
+                                        'background-color': '#0891b2', // Cyan-600
+                                        'label': 'data(label)',
+                                        'color': '#fff',
+                                        'text-valign': 'center',
+                                        'text-halign': 'center',
+                                        'width': 'label',
+                                        'height': 'label',
+                                        'padding': '12px',
+                                        'shape': 'round-rectangle'
+                                    }
+                                },
+                                {
+                                    selector: 'edge',
+                                    style: {
+                                        'width': 2,
+                                        'line-color': '#94a3b8', // Slate-400
+                                        'target-arrow-color': '#94a3b8',
+                                        'target-arrow-shape': 'triangle',
+                                        'curve-style': 'bezier',
+                                        'arrow-scale': 1.5
+                                    }
+                                }
+                            ],
+                            layout: {
+                                name: 'cose',
+                                animate: true,
+                                idealEdgeLength: 150,
+                                nodeRepulsion: 400000
                             }
-                        },
-                        {
-                            selector: 'node.folder',
-                            style: {
-                                'background-color': '#e0e0e0',
-                                'label': 'data(label)',
-                                'color': '#333',
-                                'text-valign': 'center',
-                                'text-halign': 'center',
-                                'width': 100,
-                                'height': 30,
-                                'shape': 'round-rectangle'
-                            }
-                        },
-                        {
-                            selector: 'node.file[id = "main.py"]',
-                            style: {
-                                'background-color': '#ff6b6b'
-                            }
-                        },
-                        {
-                            selector: 'node.file[id = "models.py"]',
-                            style: {
-                                'background-color': '#45b7d1'
-                            }
-                        },
-                        {
-                            selector: 'node.file[id = "views.py"]',
-                            style: {
-                                'background-color': '#96ceb4'
-                            }
-                        },
-                        {
-                            selector: 'node.file[id = "utils.py"]',
-                            style: {
-                                'background-color': '#feca57'
-                            }
-                        },
-                        {
-                            selector: 'node.file[id = "user.py"], node.file[id = "auth.py"]',
-                            style: {
-                                'background-color': '#a061d1'
-                            }
-                        },
-                        {
-                            selector: 'node.file[id = "email.py"], node.file[id = "payment.py"]',
-                            style: {
-                                'background-color': '#ff9ff3'
-                            }
-                        },
-                        {
-                            selector: 'edge',
-                            style: {
-                                'width': 2,
-                                'line-color': '#666',
-                                'target-arrow-color': '#666',
-                                'target-arrow-shape': 'triangle',
-                                'curve-style': 'bezier'
-                            }
-                        }
-                    ],
-                    layout: {
-                        name: 'dagre',
-                        rankDir: 'TB'
+                        });
+                    } else {
+                        container.innerHTML = `<div class="text-center text-red-500"><p>Error: ${data.message}</p></div>`;
                     }
+                })
+                .catch(error => {
+                    console.error('Error fetching dependency data:', error);
+                    container.innerHTML = '<div class="text-center text-red-500"><p>Error loading dependency data</p></div>';
                 });
-            }, 1000);
         }
         
         function loadComponentDiagram() {
             const container = document.getElementById('component-diagram-container');
             container.innerHTML = '<div class="text-center"><p class="text-gray-500 mb-4">Generating component diagram...</p><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div></div>';
             
-            // Simulate loading delay
-            setTimeout(() => {
-                // Create a clean, organized component diagram
-                container.innerHTML = '<div id="cy-component" style="width: 100%; height: 100%;"></div>';
-                
-                const cy = cytoscape({
-                    container: document.getElementById('cy-component'),
-                    elements: [
-                        // Entry point
-                        { data: { id: 'main.py', label: 'main.py' }, classes: 'file' },
+            fetch(`/component/${currentProjectId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        container.innerHTML = '<div id="cy-component" style="width: 100%; height: 100%;"></div>';
                         
-                        // Core components
-                        { data: { id: 'Application', label: 'Application' }, classes: 'component' },
-                        { data: { id: 'Router', label: 'Router' }, classes: 'component' },
-                        
-                        // Services and Models
-                        { data: { id: 'Auth Service', label: 'Auth Service' }, classes: 'service' },
-                        { data: { id: 'User Service', label: 'User Service' }, classes: 'service' },
-                        { data: { id: 'Data Model', label: 'Data Model' }, classes: 'model' },
-                        { data: { id: 'API Client', label: 'API Client' }, classes: 'service' },
-                        
-                        // Utilities
-                        { data: { id: 'Logger', label: 'Logger' }, classes: 'utility' },
-                        { data: { id: 'Validator', label: 'Validator' }, classes: 'utility' },
-                        { data: { id: 'Formatter', label: 'Formatter' }, classes: 'utility' },
-                        { data: { id: 'Cache', label: 'Cache' }, classes: 'utility' },
-                        { data: { id: 'Notifier', label: 'Notifier' }, classes: 'utility' },
-                        
-                        // External systems
-                        { data: { id: 'Database', label: 'Database' }, classes: 'external' },
-                        { data: { id: 'External API', label: 'External API' }, classes: 'external' },
-                        
-                        // Links
-                        { data: { source: 'main.py', target: 'Application' } },
-                        { data: { source: 'main.py', target: 'Router' } },
-                        
-                        // Application connections
-                        { data: { source: 'Application', target: 'Auth Service' } },
-                        { data: { source: 'Application', target: 'User Service' } },
-                        { data: { source: 'Application', target: 'Data Model' } },
-                        { data: { source: 'Application', target: 'API Client' } },
-                        
-                        // Router connections
-                        { data: { source: 'Router', target: 'Auth Service' } },
-                        { data: { source: 'Router', target: 'User Service' } },
-                        
-                        // Service to utility connections
-                        { data: { source: 'Auth Service', target: 'Logger' } },
-                        { data: { source: 'Auth Service', target: 'Validator' } },
-                        { data: { source: 'User Service', target: 'Formatter' } },
-                        { data: { source: 'User Service', target: 'Cache' } },
-                        { data: { source: 'API Client', target: 'Notifier' } },
-                        
-                        // Data flow to external systems
-                        { data: { source: 'Data Model', target: 'Database' } },
-                        { data: { source: 'Auth Service', target: 'Database' } },
-                        { data: { source: 'User Service', target: 'Database' } },
-                        { data: { source: 'Application', target: 'External API' } },
-                        { data: { source: 'API Client', target: 'External API' } }
-                    ],
-                    style: [
-                        {
-                            selector: 'node.component',
-                            style: {
-                                'background-color': '#4ecdc4',
-                                'label': 'data(label)',
-                                'color': '#fff',
-                                'text-valign': 'center',
-                                'text-halign': 'center',
-                                'width': 110,
-                                'height': 40,
-                                'shape': 'round-rectangle'
+                        const cy = cytoscape({
+                            container: document.getElementById('cy-component'),
+                            elements: data.data,
+                            style: [
+                                {
+                                    selector: 'node.component',
+                                    style: {
+                                        'background-color': '#e5e7eb', // Gray-200
+                                        'label': 'data(label)',
+                                        'color': '#1f2937',
+                                        'text-valign': 'top',
+                                        'text-halign': 'center',
+                                        'width': 'label',
+                                        'height': 'label',
+                                        'padding': '20px',
+                                        'shape': 'round-rectangle',
+                                        'border-width': 2,
+                                        'border-color': '#9ca3af',
+                                        'font-weight': 'bold'
+                                    }
+                                },
+                                {
+                                    selector: 'node.service',
+                                    style: {
+                                        'background-color': '#f59e0b', // Amber-500
+                                        'label': 'data(label)',
+                                        'color': '#fff',
+                                        'text-valign': 'center',
+                                        'text-halign': 'center',
+                                        'width': 'label',
+                                        'height': 'label',
+                                        'padding': '10px',
+                                        'shape': 'ellipse'
+                                    }
+                                },
+                                {
+                                    selector: 'node.model',
+                                    style: {
+                                        'background-color': '#10b981', // Emerald-500
+                                        'label': 'data(label)',
+                                        'color': '#fff',
+                                        'text-valign': 'center',
+                                        'text-halign': 'center',
+                                        'width': 'label',
+                                        'height': 'label',
+                                        'padding': '10px',
+                                        'shape': 'rectangle'
+                                    }
+                                },
+                                {
+                                    selector: 'edge',
+                                    style: {
+                                        'width': 2,
+                                        'line-color': '#6b7280',
+                                        'target-arrow-color': '#6b7280',
+                                        'target-arrow-shape': 'triangle',
+                                        'curve-style': 'bezier'
+                                    }
+                                }
+                            ],
+                            layout: {
+                                name: 'cose',
+                                animate: true,
+                                idealEdgeLength: 100,
+                                nodeRepulsion: 400000,
+                                nestingFactor: 5
                             }
-                        },
-                        {
-                            selector: 'node.service',
-                            style: {
-                                'background-color': '#feca57',
-                                'label': 'data(label)',
-                                'color': '#fff',
-                                'text-valign': 'center',
-                                'text-halign': 'center',
-                                'width': 100,
-                                'height': 40,
-                                'shape': 'ellipse'
-                            }
-                        },
-                        {
-                            selector: 'node.model',
-                            style: {
-                                'background-color': '#96ceb4',
-                                'label': 'data(label)',
-                                'color': '#fff',
-                                'text-valign': 'center',
-                                'text-halign': 'center',
-                                'width': 100,
-                                'height': 35,
-                                'shape': 'rectangle'
-                            }
-                        },
-                        {
-                            selector: 'node.utility',
-                            style: {
-                                'background-color': '#ff9ff3',
-                                'label': 'data(label)',
-                                'color': '#fff',
-                                'text-valign': 'center',
-                                'text-halign': 'center',
-                                'width': 90,
-                                'height': 30,
-                                'shape': 'polygon',
-                                'shape-polygon-points': '-0.5 -1 0 -0.5 0.5 -1 1 0 0.5 1 -0.5 1 -1 0 -0.5 -1'
-                            }
-                        },
-                        {
-                            selector: 'node.external',
-                            style: {
-                                'background-color': '#a8e6cf',
-                                'label': 'data(label)',
-                                'color': '#fff',
-                                'text-valign': 'center',
-                                'text-halign': 'center',
-                                'width': 100,
-                                'height': 40,
-                                'shape': 'barrel'
-                            }
-                        },
-                        {
-                            selector: 'node.file',
-                            style: {
-                                'background-color': '#ff6b6b',
-                                'label': 'data(label)',
-                                'color': '#fff',
-                                'text-valign': 'center',
-                                'text-halign': 'center',
-                                'width': 50,
-                                'height': 50,
-                                'shape': 'ellipse'
-                            }
-                        },
-                        {
-                            selector: 'edge',
-                            style: {
-                                'width': 2,
-                                'line-color': '#666',
-                                'target-arrow-color': '#666',
-                                'target-arrow-shape': 'triangle',
-                                'curve-style': 'bezier'
-                            }
-                        }
-                    ],
-                    layout: {
-                        name: 'cose',
-                        animate: true,
-                        refresh: 50
+                        });
+                    } else {
+                        container.innerHTML = `<div class="text-center text-red-500"><p>Error: ${data.message}</p></div>`;
                     }
+                })
+                .catch(error => {
+                    console.error('Error fetching component data:', error);
+                    container.innerHTML = '<div class="text-center text-red-500"><p>Error loading component data</p></div>';
                 });
-            }, 1000);
         }
 
         // Initialize the page

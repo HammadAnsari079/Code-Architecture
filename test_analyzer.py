@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'analyzer'))
 
-from analyzer.utils.analyzer import PythonAnalyzer
+from analyzer.utils.analyzer import EnhancedPythonAnalyzer
 
 # Create a simple test file
 test_code = '''
@@ -30,7 +30,7 @@ with open('test_file.py', 'w') as f:
     f.write(test_code)
 
 # Test the analyzer
-analyzer = PythonAnalyzer('test_file.py')
+analyzer = EnhancedPythonAnalyzer('test_file.py')
 try:
     result = analyzer.analyze()
     print("Analysis successful!")
